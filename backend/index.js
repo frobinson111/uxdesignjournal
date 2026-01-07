@@ -33,7 +33,24 @@ const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null
 
 const upload = multer({ storage: multer.memoryStorage() })
 const app = express()
-app.use(cors())
+
+// CORS - allow Vercel frontend and localhost for dev
+const allowedOrigins = [
+  'https://uxdesignjournal.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+]
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    // Allow any vercel preview URLs
+    if (origin.endsWith('.vercel.app')) return callback(null, true)
+    callback(new Error('Not allowed by CORS'))
+  },
+  credentials: true,
+}))
 app.use(bodyParser.json())
 
 // Serve uploaded images statically
