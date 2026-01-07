@@ -38,6 +38,7 @@ const app = express()
 // CORS - allow Vercel frontend and localhost for dev
 const allowedOrigins = [
   'https://uxdesignjournal.vercel.app',
+  'https://uxdesignjournal.com',
   'http://localhost:3000',
   'http://localhost:5173',
 ]
