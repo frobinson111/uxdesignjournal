@@ -27,12 +27,16 @@ export interface Article {
 
 export interface AdSlot {
   id?: string
+  placement?: string
+  size?: string
   type: AdCreativeType
   imageUrl?: string
   href?: string
   alt?: string
   html?: string
   label?: string
+  active?: boolean
+  order?: number
 }
 
 export interface HomepagePayload {

@@ -40,6 +40,18 @@ export function ArticlePage() {
   if (error) return <div className="wrap section error">{error}</div>
   if (!data) return null
 
+  const pickOne = <T,>(arr: T[] = []) => (arr.length ? arr[Math.floor(Math.random() * arr.length)] : undefined)
+  const inlineAds = data.ads?.inline || []
+  const readMoreAd = pickOne(inlineAds.filter((ad) => ad.size === '728x250' || ad.placement === 'article-readmore'))
+  const readMoreSlot = readMoreAd || {
+    id: 'article-readmore-placeholder',
+    type: 'IMAGE_LINK',
+    imageUrl: 'https://via.placeholder.com/728x250?text=Ad+728x250',
+    href: '#',
+    label: 'Advertisement',
+    alt: '728x250 ad',
+  }
+
   return (
     <div className="wrap section article-page">
       <article className="article-body">
@@ -57,8 +69,6 @@ export function ArticlePage() {
           <p className="muted">Full article content will appear here.</p>
         )}
 
-        {data.ads?.inline?.map((slot) => <AdSlotRenderer key={slot.id} slot={slot} placement="inline" />)}
-
         {data.related && data.related.length > 0 && (
           <section className="related">
             <h3>Related reading</h3>
@@ -69,6 +79,10 @@ export function ArticlePage() {
             </ul>
           </section>
         )}
+
+        <div className="ad-block">
+          <AdSlotRenderer slot={readMoreSlot} placement="inline" size="728x250" />
+        </div>
       </article>
 
       <aside className="article-aside">

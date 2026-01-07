@@ -3,6 +3,7 @@ import type {
   AdminArticlesResponse,
   AdminLoginResponse,
   ArticlePayload,
+  AdSlot,
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
@@ -74,6 +75,37 @@ export async function adminUpdateArticleFields(token: string, slug: string, fiel
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(fields),
+  })
+}
+
+export async function adminDeleteArticle(token: string, slug: string) {
+  return request<{ ok: boolean }>(`/api/admin/articles/${slug}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// Ads
+export async function adminListAds(token: string, placement?: string) {
+  const qs = placement ? `?placement=${encodeURIComponent(placement)}` : ''
+  return request<AdSlot[]>(`/api/admin/ads${qs}`, { headers: { Authorization: `Bearer ${token}` } })
+}
+
+export async function adminSaveAd(token: string, payload: AdSlot & { placement: string; type: string }) {
+  const isNew = !payload.id
+  const path = isNew ? '/api/admin/ads' : `/api/admin/ads/${payload.id}`
+  const method = isNew ? 'POST' : 'PUT'
+  return request<AdSlot>(path, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function adminDeleteAd(token: string, id: string) {
+  return request<{ ok: boolean }>(`/api/admin/ads/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
   })
 }
 

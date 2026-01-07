@@ -42,20 +42,28 @@ export const normalizeAd = (ad: unknown): AdSlot | null => {
     if (!obj.imageUrl || !obj.href) return null
     return {
       id: asString(obj.id),
+      placement: asString(obj.placement),
+      size: asString(obj.size),
       type,
       imageUrl: asString(obj.imageUrl),
       href: asString(obj.href),
       alt: asString(obj.alt),
       label: asString(obj.label),
+      active: Boolean(obj.active ?? true),
+      order: Number(obj.order) || 0,
     }
   }
   if (type === 'EMBED_SNIPPET') {
     if (!obj.html) return null
     return {
       id: asString(obj.id),
+      placement: asString(obj.placement),
+      size: asString(obj.size),
       type,
       html: asString(obj.html),
       label: asString(obj.label),
+      active: Boolean(obj.active ?? true),
+      order: Number(obj.order) || 0,
     }
   }
   return null

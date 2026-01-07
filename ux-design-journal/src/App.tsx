@@ -16,6 +16,7 @@ import { AdminLayout } from './components/AdminLayout'
 import { AdminArticlesList } from './pages/admin/AdminArticlesList'
 import { AdminArticleEdit } from './pages/admin/AdminArticleEdit'
 import { AdminAIGenerate } from './pages/admin/AdminAIGenerate'
+import { AdminAds } from './pages/admin/AdminAds'
 
 function App() {
   const { categories } = useCategories()
@@ -38,6 +39,7 @@ function App() {
               <Route path="articles/new" element={<AdminArticleEdit />} />
               <Route path="articles/:slug" element={<AdminArticleEdit />} />
               <Route path="ai" element={<AdminAIGenerate />} />
+              <Route path="ads" element={<AdminAds />} />
             </Route>
           </Route>
         </Routes>

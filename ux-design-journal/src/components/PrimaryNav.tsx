@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import type { Category } from '../types'
 
@@ -5,19 +6,38 @@ interface Props {
   categories: Category[]
 }
 
-const pinned: Category[] = [
-  { slug: '', name: 'Home', pinned: true },
-  { slug: 'archive', name: 'Archive', pinned: true },
-  { slug: 'subscribe', name: 'Subscribe', pinned: true },
-]
-
 export function PrimaryNav({ categories }: Props) {
-  const merged = [...pinned, ...categories.filter((c) => !pinned.find((p) => p.slug === c.slug))]
+  const [open, setOpen] = useState(false)
+  const categoriesBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]))
+
+  const desiredOrder = ['', 'practice', 'design-reviews', 'career', 'signals', 'journal', 'subscribe']
+  const merged = desiredOrder
+    .map((slug) => {
+      if (slug === '') return { slug, name: 'Home' } satisfies Category
+      if (slug === 'subscribe') return { slug, name: 'SUBSCRIBE' } satisfies Category
+      const match = categoriesBySlug[slug]
+      return match
+    })
+    .filter(Boolean) as Category[]
+
+  const toggle = () => setOpen((v) => !v)
+  const close = () => setOpen(false)
 
   return (
     <nav className="primary-nav" aria-label="Primary">
-      <div className="wrap">
-        <ul>
+      <div className="wrap nav-inner">
+        <button
+          className="nav-toggle"
+          aria-label="Toggle navigation"
+          aria-expanded={open}
+          onClick={toggle}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        <ul className={open ? 'open' : undefined} onClick={close}>
           {merged.map((item) => {
             const to = item.slug === '' ? '/' : `/${item.slug}`
             return (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { adminListArticles, adminUpdateArticleFields } from '../../api/admin'
+import { adminDeleteArticle, adminListArticles, adminUpdateArticleFields } from '../../api/admin'
 import type { AdminArticleListItem } from '../../types'
 import { useAuth } from '../../auth/AuthContext'
 
@@ -10,6 +10,7 @@ export function AdminArticlesList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [mutating, setMutating] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   useEffect(() => {
     if (!token) return
@@ -49,8 +50,9 @@ export function AdminArticlesList() {
               <td>{item.status}</td>
               <td>{item.status === 'published' && item.featured ? 'Yes' : 'No'}</td>
               <td className="table-actions">
-                <Link to={`/admin/articles/${item.slug}`}>Edit</Link>
+                <Link className="btn btn-sm" to={`/admin/articles/${item.slug}`}>Edit</Link>
                 <button
+                  className="btn btn-sm ghost"
                   disabled={mutating === item.slug}
                   onClick={async () => {
                     if (!token) return
@@ -73,6 +75,26 @@ export function AdminArticlesList() {
                   }}
                 >
                   {((item as any).featured ? 'Unfeature' : 'Feature')}
+                </button>
+                <button
+                  className="btn btn-sm btn-danger"
+                  disabled={deleting === item.slug}
+                  onClick={async () => {
+                    if (!token) return
+                    if (!confirm('Delete this article?')) return
+                    setDeleting(item.slug)
+                    try {
+                      await adminDeleteArticle(token, item.slug)
+                      setItems((prev) => prev.filter((p) => p.slug !== item.slug))
+                    } catch (err) {
+                      console.error(err)
+                      setError('Could not delete article.')
+                    } finally {
+                      setDeleting(null)
+                    }
+                  }}
+                >
+                  Delete
                 </button>
               </td>
             </tr>

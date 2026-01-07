@@ -1,17 +1,25 @@
 import type { FormEvent } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { adminGenerateAI } from '../../api/admin'
 import { useAuth } from '../../auth/AuthContext'
+import { useCategories } from '../../hooks/useCategories'
 
 export function AdminAIGenerate() {
   const { token } = useAuth()
   const navigate = useNavigate()
+  const { categories } = useCategories()
   const [category, setCategory] = useState('practice')
   const [sourceUrl, setSourceUrl] = useState('')
   const [mode, setMode] = useState<'rewrite' | 'from-scratch'>('rewrite')
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (categories.length && (!category || !categories.find((c) => c.slug === category))) {
+      setCategory(categories[0].slug)
+    }
+  }, [categories, category])
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -41,7 +49,11 @@ export function AdminAIGenerate() {
       <form className="admin-form" onSubmit={onSubmit}>
         <label>
           Category slug
-          <input value={category} onChange={(e) => setCategory(e.target.value)} required />
+          <select value={category} onChange={(e) => setCategory(e.target.value)} required>
+            {categories.map((c) => (
+              <option key={c.slug} value={c.slug}>{c.slug}</option>
+            ))}
+          </select>
         </label>
         <label>
           Source URL (optional for rewrite)

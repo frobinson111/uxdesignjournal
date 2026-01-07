@@ -43,13 +43,21 @@ export function CategoryPage() {
         <div className="category-main">
           {data.articles.length === 0 && <p className="muted">No articles yet.</p>}
           {data.articles.map((article) => (
-            <article key={article.slug} className="article-row">
-              <div className="meta-row">
-                <span className="meta-cat">{typeof article.category === 'string' ? article.category : article.category.name}</span>
-                {article.date && <span className="meta-date">{article.date}</span>}
+            <article key={article.slug} className="article-row article-row-thumb">
+              <Link
+                to={`/article/${article.slug}`}
+                className="article-thumb"
+                style={{ backgroundImage: `url(${article.imageUrl || `https://picsum.photos/seed/${article.slug}/300/300`})` }}
+                aria-label={article.title}
+              />
+              <div className="article-row-body">
+                <div className="meta-row">
+                  <span className="meta-cat">{typeof article.category === 'string' ? article.category : article.category.name}</span>
+                  {article.date && <span className="meta-date">{article.date}</span>}
+                </div>
+                <h3><Link to={`/article/${article.slug}`}>{article.title}</Link></h3>
+                {article.excerpt && <p>{article.excerpt}</p>}
               </div>
-              <h3><Link to={`/article/${article.slug}`}>{article.title}</Link></h3>
-              {article.excerpt && <p>{article.excerpt}</p>}
             </article>
           ))}
 
