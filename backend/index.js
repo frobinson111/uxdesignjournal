@@ -287,7 +287,7 @@ app.post('/api/admin/ai/generate', async (req, res) => {
     try {
       const img = await openai.images.generate({
         model: 'dall-e-3',
-        prompt: `Create a wall-street-journal style Hedcut stipple illustration for this UX article: "${parsed.title || 'UX article'}". Use black ink stippling, high-contrast dotwork, classic newspaper portrait style.`,
+        prompt: `Create a classic Wall Street Journal Hedcut portrait illustration. Style: hand-drawn stipple dot technique, thousands of tiny black ink dots on pure white background, crosshatching for shadows, no solid fills, only dots and fine lines. Subject: a conceptual scene related to "${parsed.title || 'UX design'}". Must look exactly like a traditional newspaper Hedcut engraving - monochromatic black dots on white, high contrast, editorial illustration style.`,
         size: '1024x1024',
       })
       const tempUrl = img.data?.[0]?.url || ''
@@ -339,7 +339,7 @@ app.post('/api/admin/ai/regenerate-image/:slug', async (req, res) => {
   try {
     const img = await openai.images.generate({
       model: 'dall-e-3',
-      prompt: `Create a wall-street-journal style Hedcut stipple illustration for this UX article: "${article.title || 'UX article'}". Use black ink stippling, high-contrast dotwork, classic newspaper portrait style.`,
+      prompt: `Create a classic Wall Street Journal Hedcut portrait illustration. Style: hand-drawn stipple dot technique, thousands of tiny black ink dots on pure white background, crosshatching for shadows, no solid fills, only dots and fine lines. Subject: a conceptual scene related to "${article.title || 'UX design'}". Must look exactly like a traditional newspaper Hedcut engraving - monochromatic black dots on white, high contrast, editorial illustration style.`,
       size: '1024x1024',
     })
     const tempUrl = img.data?.[0]?.url
