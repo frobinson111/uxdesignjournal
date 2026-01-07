@@ -1,0 +1,12 @@
+node_modules
+dist
+.DS_Store
+.env
+.env.*
+backend/.env
+backend/public/uploads
+ux-design-journal/node_modules
+ux-design-journal/dist
+ux-design-journal/.env
+ux-design-journal/.env.*
+

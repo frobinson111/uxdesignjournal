@@ -1,0 +1,79 @@
+import { request, postJson } from './client'
+import type {
+  AdminArticlesResponse,
+  AdminLoginResponse,
+  ArticlePayload,
+} from '../types'
+
+const API_BASE = import.meta.env.VITE_API_BASE || ''
+
+export async function adminLogin(email: string, password: string) {
+  const res = await postJson<AdminLoginResponse>('/api/admin/login', { email, password })
+  return res
+}
+
+export async function adminGetMe(token: string) {
+  return request<{ email: string }>('/api/admin/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function adminListArticles(token: string, params: { page?: number; q?: string } = {}) {
+  const search = new URLSearchParams()
+  if (params.page) search.set('page', String(params.page))
+  if (params.q) search.set('q', params.q)
+  const qs = search.toString()
+  const path = `/api/admin/articles${qs ? `?${qs}` : ''}`
+  return request<AdminArticlesResponse>(path, { headers: { Authorization: `Bearer ${token}` } })
+}
+
+export async function adminGetArticle(token: string, slug: string) {
+  return request<ArticlePayload>(`/api/admin/articles/${slug}`, { headers: { Authorization: `Bearer ${token}` } })
+}
+
+export async function adminSaveArticle(token: string, payload: ArticlePayload) {
+  const isNew = !payload.slug
+  const path = isNew ? '/api/admin/articles' : `/api/admin/articles/${payload.slug}`
+  const method = isNew ? 'POST' : 'PUT'
+  return request<ArticlePayload>(path, {
+    method,
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function adminUploadImage(token: string, file: File) {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(`${API_BASE}/api/admin/uploads`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  })
+  if (!res.ok) throw new Error('Upload failed')
+  return (await res.json()) as { url: string }
+}
+
+export async function adminGenerateAI(token: string, payload: { category: string; sourceUrl?: string; mode?: string }) {
+  return request<{ slug: string; status: string }>('/api/admin/ai/generate', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function adminRegenerateImage(token: string, slug: string) {
+  return request<{ imageUrl: string }>(`/api/admin/ai/regenerate-image/${slug}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function adminUpdateArticleFields(token: string, slug: string, fields: Partial<ArticlePayload>) {
+  return request<ArticlePayload>(`/api/admin/articles/${slug}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(fields),
+  })
+}
+
