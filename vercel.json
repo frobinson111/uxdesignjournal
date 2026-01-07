@@ -1,6 +1,5 @@
 {
   "framework": "vite",
-  "buildCommand": "cd ux-design-journal && npm install && npm run build",
-  "outputDirectory": "ux-design-journal/dist"
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "dist"
 }
-
