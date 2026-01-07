@@ -8,22 +8,22 @@ import mongoose from 'mongoose'
 import { v4 as uuid } from 'uuid'
 import OpenAI from 'openai'
 import { extract } from '@extractus/article-extractor'
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import { v2 as cloudinary } from 'cloudinary'
 
 dotenv.config()
-
-// ES module dirname
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
 
 const PORT = process.env.PORT || 4000
 const MONGO_URI = process.env.MONGO_URI
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
-const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${PORT}`
+
+// Cloudinary configuration
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+})
 
 if (!MONGO_URI) {
   console.error('Missing MONGO_URI. Set it in backend/.env')
@@ -54,26 +54,22 @@ app.use(cors({
 }))
 app.use(bodyParser.json())
 
-// Serve uploaded images statically
-const uploadsDir = path.join(__dirname, 'public', 'uploads')
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true })
-}
-app.use('/uploads', express.static(uploadsDir))
-
-// Helper to download and save image permanently
-async function downloadAndSaveImage(imageUrl, slug) {
+// Helper to upload image to Cloudinary
+async function uploadToCloudinary(imageUrl, slug) {
+  if (!process.env.CLOUDINARY_CLOUD_NAME) {
+    console.warn('Cloudinary not configured, using fallback')
+    return null
+  }
   try {
-    const response = await fetch(imageUrl)
-    if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`)
-    const buffer = Buffer.from(await response.arrayBuffer())
-    const filename = `${slug}-${Date.now()}.png`
-    const filepath = path.join(uploadsDir, filename)
-    fs.writeFileSync(filepath, buffer)
-    // Return absolute URL for production
-    return `${BACKEND_URL}/uploads/${filename}`
+    const result = await cloudinary.uploader.upload(imageUrl, {
+      public_id: `uxdj/${slug}-${Date.now()}`,
+      folder: 'uxdesignjournal',
+      transformation: [{ width: 1024, height: 1024, crop: 'limit' }],
+    })
+    console.log('Uploaded to Cloudinary:', result.secure_url)
+    return result.secure_url
   } catch (err) {
-    console.error('Failed to download/save image:', err?.message || err)
+    console.error('Cloudinary upload failed:', err?.message || err)
     return null
   }
 }
@@ -297,8 +293,8 @@ app.post('/api/admin/ai/generate', async (req, res) => {
       const tempUrl = img.data?.[0]?.url || ''
       if (!tempUrl) throw new Error('No image URL returned from OpenAI')
       // Download and save permanently
-      const savedPath = await downloadAndSaveImage(tempUrl, slugBase)
-      imageUrl = savedPath || fallbackImage(slugBase)
+      const cloudinaryUrl = await uploadToCloudinary(tempUrl, slugBase)
+      imageUrl = cloudinaryUrl || fallbackImage(slugBase)
       console.log('Image saved permanently:', imageUrl)
     } catch (err) {
       console.error('Image gen failed', err?.message || err)
@@ -350,8 +346,8 @@ app.post('/api/admin/ai/regenerate-image/:slug', async (req, res) => {
     if (!tempUrl) throw new Error('No image URL returned from OpenAI')
     
     // Download and save permanently
-    const savedPath = await downloadAndSaveImage(tempUrl, article.slug)
-    const imageUrl = savedPath || fallbackImage(article.slug)
+    const cloudinaryUrl = await uploadToCloudinary(tempUrl, article.slug)
+    const imageUrl = cloudinaryUrl || fallbackImage(article.slug)
     
     article.imageUrl = imageUrl
     await article.save()
@@ -478,15 +474,19 @@ const safeImageUrl = (doc) => {
   const url = doc?.imageUrl || ''
   if (!url) return fallbackImage(doc?.slug || 'placeholder')
   
-  // Allow local/absolute uploads to pass through
-  if (url.startsWith('/uploads/') || url.includes('/uploads/')) return url
+  // Allow Cloudinary URLs
+  if (url.includes('cloudinary.com') || url.includes('res.cloudinary.com')) return url
+  
+  // Allow picsum placeholder URLs
+  if (url.includes('picsum.photos')) return url
   
   const lowered = url.toLowerCase()
   // Replace expired OpenAI blob URLs and mock upload URLs with placeholders
   if (
     lowered.includes('oaidalle') ||
     lowered.includes('blob.core.windows.net') ||
-    lowered.includes('images.example.com')
+    lowered.includes('images.example.com') ||
+    lowered.includes('/uploads/')
   ) {
     return fallbackImage(doc?.slug || 'placeholder')
   }

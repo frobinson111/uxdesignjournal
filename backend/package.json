@@ -14,6 +14,7 @@
     "@extractus/article-extractor": "^8.0.20",
     "bcryptjs": "^3.0.3",
     "body-parser": "^2.2.1",
+    "cloudinary": "^2.5.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
