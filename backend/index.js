@@ -23,6 +23,7 @@ const MONGO_URI = process.env.MONGO_URI
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${PORT}`
 
 if (!MONGO_URI) {
   console.error('Missing MONGO_URI. Set it in backend/.env')
@@ -69,8 +70,8 @@ async function downloadAndSaveImage(imageUrl, slug) {
     const filename = `${slug}-${Date.now()}.png`
     const filepath = path.join(uploadsDir, filename)
     fs.writeFileSync(filepath, buffer)
-    // Return the permanent URL
-    return `/uploads/${filename}`
+    // Return absolute URL for production
+    return `${BACKEND_URL}/uploads/${filename}`
   } catch (err) {
     console.error('Failed to download/save image:', err?.message || err)
     return null
@@ -477,8 +478,8 @@ const safeImageUrl = (doc) => {
   const url = doc?.imageUrl || ''
   if (!url) return fallbackImage(doc?.slug || 'placeholder')
   
-  // Allow local uploads to pass through
-  if (url.startsWith('/uploads/')) return url
+  // Allow local/absolute uploads to pass through
+  if (url.startsWith('/uploads/') || url.includes('/uploads/')) return url
   
   const lowered = url.toLowerCase()
   // Replace expired OpenAI blob URLs and mock upload URLs with placeholders
