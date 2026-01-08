@@ -72,7 +72,7 @@ a:hover{ text-decoration:underline; }
 
 /* Masthead */
 .masthead{
-  background:var(--paper);
+  background:#fff;
   border-bottom:1px solid var(--hair);
 }
 .masthead-inner{
@@ -158,7 +158,7 @@ main{
   border-left:1px solid var(--hair);
   border-right:1px solid var(--hair);
   box-shadow: var(--shadow);
-  margin: 18px auto 0;
+  margin: 0 auto;
 }
 
 .section{
@@ -702,6 +702,9 @@ footer{
   background-size:cover;
   background-position:center;
   margin: 14px 0;
+}
+.article-hero::after{
+  content: none;
 }
 .article-body .article-content h2,
 .article-body .article-content h3,
