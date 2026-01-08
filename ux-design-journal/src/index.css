@@ -255,7 +255,6 @@ main{
 
 /* Right: Daily feed */
 .sidebar{
-  border-left:1px solid var(--hair);
   padding-left: 18px;
 }
 .sidebar h2{
