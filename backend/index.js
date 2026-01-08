@@ -39,19 +39,34 @@ const app = express()
 const APP_VERSION = '2.0.0'
 
 // CORS - allow Vercel frontend and localhost for dev
-const allowedOrigins = [
+const baseAllowedOrigins = [
   'https://uxdesignjournal.vercel.app',
   'https://uxdesignjournal.com',
+  'https://www.uxdesignjournal.com',
   'http://localhost:3000',
   'http://localhost:5173',
 ]
+
+const envAllowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+
+const allowedOrigins = [...baseAllowedOrigins, ...envAllowedOrigins]
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true // Allow requests with no origin (mobile apps, curl, etc.)
+  if (allowedOrigins.includes(origin)) return true
+  // Allow any Vercel preview URLs
+  if (origin.endsWith('.vercel.app')) return true
+  // Allow custom domain variants
+  if (origin === 'https://www.uxdesignjournal.com') return true
+  return false
+}
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true)
-    if (allowedOrigins.includes(origin)) return callback(null, true)
-    // Allow any vercel preview URLs
-    if (origin.endsWith('.vercel.app')) return callback(null, true)
+    if (isAllowedOrigin(origin)) return callback(null, true)
+    console.error('CORS blocked origin:', origin)
     callback(new Error('Not allowed by CORS'))
   },
   credentials: true,
