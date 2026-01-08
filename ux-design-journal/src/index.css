@@ -58,6 +58,23 @@ a:hover{ text-decoration:underline; }
   align-items:center;
   white-space:nowrap;
 }
+.topbar-search{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.topbar-search form{
+  display:flex;
+}
+.topbar-search input{
+  width: min(240px, 56vw);
+  height: 34px;
+  border:1px solid var(--hair2);
+  padding:0 10px;
+  font-family:var(--sans);
+  font-size:13px;
+  border-radius: 999px;
+}
 .icon-btn{
   display:inline-flex;
   align-items:center;

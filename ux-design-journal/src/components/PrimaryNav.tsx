@@ -10,11 +10,11 @@ export function PrimaryNav({ categories }: Props) {
   const [open, setOpen] = useState(false)
   const categoriesBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]))
 
-  const desiredOrder = ['', 'practice', 'design-reviews', 'career', 'signals', 'journal', 'subscribe']
+  const desiredOrder = ['', 'practice', 'design-reviews', 'career', 'signals', 'journal', 'editorial']
   const merged = desiredOrder
     .map((slug) => {
       if (slug === '') return { slug, name: 'Home' } satisfies Category
-      if (slug === 'subscribe') return { slug, name: 'SUBSCRIBE' } satisfies Category
+      if (slug === 'editorial') return { slug, name: 'Editorial' } satisfies Category
       const match = categoriesBySlug[slug]
       return match
     })
@@ -48,11 +48,6 @@ export function PrimaryNav({ categories }: Props) {
               </li>
             )
           })}
-          <li aria-label="Search">
-            <NavLink to="/search" className={({ isActive }) => (isActive ? 'active' : undefined)}>
-              Search
-            </NavLink>
-          </li>
         </ul>
       </div>
     </nav>

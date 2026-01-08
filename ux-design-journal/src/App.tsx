@@ -7,6 +7,7 @@ import { ArticlePage } from './pages/ArticlePage'
 import { ArchivePage } from './pages/ArchivePage'
 import { SearchPage } from './pages/SearchPage'
 import { SubscribePage } from './pages/SubscribePage'
+import { EditorialPage } from './pages/EditorialPage'
 import { useCategories } from './hooks/useCategories'
 import { useEngagedTimer } from './hooks/useEngagedTimer'
 import { EmailGateModal } from './components/EmailGateModal'
@@ -30,6 +31,7 @@ function App() {
           <Route path="/archive" element={<ArchivePage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/subscribe" element={<SubscribePage />} />
+          <Route path="/editorial" element={<EditorialPage />} />
           <Route path="/article/:slug" element={<ArticlePage />} />
           <Route path="/:categorySlug" element={<CategoryPage />} />
           <Route path="/admin/login" element={<AdminLogin />} />
