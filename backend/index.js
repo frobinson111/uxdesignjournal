@@ -1,3 +1,4 @@
+// Backend v2.0.0 - Ads management, article delete
 import dotenv from 'dotenv'
 import express from 'express'
 import cors from 'cors'
@@ -58,8 +59,8 @@ app.use(bodyParser.json())
 // Helper to upload image to Cloudinary
 async function uploadToCloudinary(imageUrl, slug) {
   if (!process.env.CLOUDINARY_CLOUD_NAME) {
-    console.warn('Cloudinary not configured, using fallback')
-    return null
+    console.warn('Cloudinary not configured, returning source image URL')
+    return imageUrl || null
   }
   try {
     const result = await cloudinary.uploader.upload(imageUrl, {
@@ -117,8 +118,22 @@ const ArticleSchema = new mongoose.Schema({
   featureOrder: { type: Number, default: 0 },
 }, { timestamps: true })
 
+const AdSchema = new mongoose.Schema({
+  placement: { type: String, required: true },
+  size: { type: String, default: '' },
+  type: { type: String, enum: ['IMAGE_LINK', 'EMBED_SNIPPET'], required: true },
+  imageUrl: String,
+  href: String,
+  alt: String,
+  html: String,
+  label: String,
+  active: { type: Boolean, default: true },
+  order: { type: Number, default: 0 },
+}, { timestamps: true })
+
 const User = mongoose.model('User', UserSchema)
 const Article = mongoose.model('Article', ArticleSchema)
+const Ad = mongoose.model('Ad', AdSchema)
 
 // Seed admin
 const ensureAdmin = async () => {
@@ -245,6 +260,47 @@ app.put('/api/admin/articles/:slug', async (req, res) => {
   res.json(updated)
 })
 
+app.delete('/api/admin/articles/:slug', async (req, res) => {
+  const deleted = await Article.findOneAndDelete({ slug: req.params.slug })
+  if (!deleted) return res.status(404).json({ message: 'Not found' })
+  res.json({ ok: true })
+})
+
+// Admin ads CRUD
+app.get('/api/admin/ads', async (req, res) => {
+  const placement = (req.query.placement || '').toString()
+  const filter = placement ? { placement } : {}
+  const ads = await Ad.find(filter).sort({ placement: 1, order: 1, updatedAt: -1 }).lean()
+  res.json(ads)
+})
+
+app.post('/api/admin/ads', async (req, res) => {
+  try {
+    const payload = sanitizeAdPayload(req.body || {})
+    const created = await Ad.create(payload)
+    res.json(created)
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Invalid payload' })
+  }
+})
+
+app.put('/api/admin/ads/:id', async (req, res) => {
+  try {
+    const payload = sanitizeAdPayload(req.body || {})
+    const updated = await Ad.findByIdAndUpdate(req.params.id, payload, { new: true })
+    if (!updated) return res.status(404).json({ message: 'Not found' })
+    res.json(updated)
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Invalid payload' })
+  }
+})
+
+app.delete('/api/admin/ads/:id', async (req, res) => {
+  const deleted = await Ad.findByIdAndDelete(req.params.id)
+  if (!deleted) return res.status(404).json({ message: 'Not found' })
+  res.json({ ok: true })
+})
+
 // Upload mock
 app.post('/api/admin/uploads', upload.single('file'), (req, res) => {
   const filename = req.file ? req.file.originalname : 'upload'
@@ -286,11 +342,18 @@ app.post('/api/admin/ai/generate', async (req, res) => {
     const slugBase = parsed.title ? slugify(parsed.title) : slugify(uuid())
     let imageUrl = ''
     try {
-      const img = await openai.images.generate({
-        model: 'dall-e-3',
-        prompt: `Create a classic Wall Street Journal Hedcut portrait illustration. Style: hand-drawn stipple dot technique, thousands of tiny black ink dots on pure white background, crosshatching for shadows, no solid fills, only dots and fine lines. Subject: a conceptual scene related to "${parsed.title || 'UX design'}". Must look exactly like a traditional newspaper Hedcut engraving - monochromatic black dots on white, high contrast, editorial illustration style.`,
-        size: '1024x1024',
-      })
+    const img = await openai.images.generate({
+      model: 'dall-e-3',
+      prompt: [
+        'Create a classic Wall Street Journal Hedcut portrait illustration.',
+        'Style: hand-drawn stipple dot technique, thousands of tiny black ink dots on pure white background.',
+        'Use crosshatching for shadows, no solid fills, no gradients, no grayscale washes, no color.',
+        'Subject: a conceptual scene related to "', parsed.title || 'UX design', '".',
+        'Must look exactly like a traditional newspaper Hedcut engraving — monochromatic black dots on white, high contrast, editorial illustration style.',
+        'Avoid photographic, 3D, vector, cartoon, or digital-painting looks.',
+      ].join(' '),
+      size: '1024x1024',
+    })
       const tempUrl = img.data?.[0]?.url || ''
       if (!tempUrl) throw new Error('No image URL returned from OpenAI')
       // Download and save permanently
@@ -340,7 +403,14 @@ app.post('/api/admin/ai/regenerate-image/:slug', async (req, res) => {
   try {
     const img = await openai.images.generate({
       model: 'dall-e-3',
-      prompt: `Create a classic Wall Street Journal Hedcut portrait illustration. Style: hand-drawn stipple dot technique, thousands of tiny black ink dots on pure white background, crosshatching for shadows, no solid fills, only dots and fine lines. Subject: a conceptual scene related to "${article.title || 'UX design'}". Must look exactly like a traditional newspaper Hedcut engraving - monochromatic black dots on white, high contrast, editorial illustration style.`,
+      prompt: [
+        'Create a classic Wall Street Journal Hedcut portrait illustration.',
+        'Style: hand-drawn stipple dot technique, thousands of tiny black ink dots on pure white background.',
+        'Use crosshatching for shadows, no solid fills, no gradients, no grayscale washes, no color.',
+        'Subject: a conceptual scene related to "', article.title || 'UX design', '".',
+        'Must look exactly like a traditional newspaper Hedcut engraving — monochromatic black dots on white, high contrast, editorial illustration style.',
+        'Avoid photographic, 3D, vector, cartoon, or digital-painting looks.',
+      ].join(' '),
       size: '1024x1024',
     })
     const tempUrl = img.data?.[0]?.url
@@ -369,6 +439,9 @@ app.get('/api/public/categories', (_req, res) => {
 })
 
 app.get('/api/public/homepage', async (_req, res) => {
+  const adPlacements = await getAdsByPlacement(['homepage-latest', 'homepage-lead'])
+  const pickPlacement = (key) => pickRandom(adPlacements[key] || []).map(mapAd)
+
   const latest = await Article.find({ status: 'published' }).sort({ createdAt: -1 }).limit(6).lean()
   const lead = latest[0] ? mapArticle(latest[0]) : null
   const daily = latest.slice(0, 4).map(mapArticle)
@@ -384,7 +457,10 @@ app.get('/api/public/homepage', async (_req, res) => {
     daily,
     featured: featured.map(mapArticle),
     tiles: tiles.map(mapArticle),
-    ads: { sidebar: [], inline: [] },
+    ads: {
+      sidebar: pickPlacement('homepage-latest'),
+      inline: pickPlacement('homepage-lead'),
+    },
   })
 })
 
@@ -405,10 +481,20 @@ app.get('/api/public/category/:slug', async (req, res) => {
 })
 
 app.get('/api/public/article/:slug', async (req, res) => {
+  const adPlacements = await getAdsByPlacement(['article-inline', 'article-readmore', 'article-sidebar'])
+  const pickPlacement = (key) => pickRandom(adPlacements[key] || []).map(mapAd)
+
   const a = await Article.findOne({ slug: req.params.slug }).lean()
   if (!a) return res.status(404).json({ message: 'Not found' })
   const related = await Article.find({ slug: { $ne: a.slug }, status: 'published' }).limit(3).lean()
-  res.json({ ...mapArticle(a), related: related.map(mapArticle), ads: { sidebar: [], inline: [] } })
+  res.json({
+    ...mapArticle(a),
+    related: related.map(mapArticle),
+    ads: {
+      sidebar: pickPlacement('article-sidebar'),
+      inline: [...pickPlacement('article-inline'), ...pickPlacement('article-readmore')],
+    },
+  })
 })
 
 app.get('/api/public/archive', async (req, res) => {
@@ -470,7 +556,7 @@ app.post('/api/public/session/identify', (_req, res) => {
 })
 
 // Fallback image helper
-const fallbackImage = (slug = 'placeholder') => `https://picsum.photos/seed/${encodeURIComponent(slug)}/1024/1024?grayscale`
+const fallbackImage = (slug = 'placeholder') => `https://picsum.photos/seed/${encodeURIComponent(slug)}/1024/1024`
 const safeImageUrl = (doc) => {
   const url = doc?.imageUrl || ''
   if (!url) return fallbackImage(doc?.slug || 'placeholder')
@@ -481,19 +567,64 @@ const safeImageUrl = (doc) => {
   // Allow picsum placeholder URLs
   if (url.includes('picsum.photos')) return url
   
-  const lowered = url.toLowerCase()
-  // Replace expired OpenAI blob URLs and mock upload URLs with placeholders
-  if (
-    lowered.includes('oaidalle') ||
-    lowered.includes('blob.core.windows.net') ||
-    lowered.includes('images.example.com') ||
-    lowered.includes('/uploads/')
-  ) {
-    return fallbackImage(doc?.slug || 'placeholder')
-  }
   return url
 }
 const mapArticle = (a) => ({ ...a, imageUrl: safeImageUrl(a) })
+const mapAd = (ad) => ({
+  id: ad._id?.toString() || ad.id,
+  placement: ad.placement,
+  size: ad.size,
+  type: ad.type,
+  imageUrl: ad.imageUrl,
+  href: ad.href,
+  alt: ad.alt,
+  html: ad.html,
+  label: ad.label,
+})
+
+const sanitizeAdPayload = (body = {}) => {
+  const base = {
+    placement: (body.placement || '').toString(),
+    size: (body.size || '').toString(),
+    type: (body.type || '').toString(),
+    imageUrl: (body.imageUrl || '').toString(),
+    href: (body.href || '').toString(),
+    alt: (body.alt || '').toString(),
+    html: (body.html || '').toString(),
+    label: (body.label || '').toString(),
+    active: body.active !== false,
+    order: Number.isFinite(body.order) ? body.order : 0,
+  }
+  if (!base.placement) throw new Error('placement is required')
+  if (!base.type) throw new Error('type is required')
+  if (base.type === 'IMAGE_LINK') {
+    if (!base.imageUrl) throw new Error('imageUrl is required for IMAGE_LINK')
+    if (!base.href) throw new Error('href is required for IMAGE_LINK')
+  }
+  if (base.type === 'EMBED_SNIPPET') {
+    if (!base.html) throw new Error('html is required for EMBED_SNIPPET')
+  }
+  return base
+}
+
+const getAdsByPlacement = async (placements = []) => {
+  const results = {}
+  for (const placement of placements) {
+    const items = await Ad.find({ placement, active: true }).sort({ order: 1, updatedAt: -1 }).lean()
+    results[placement] = items
+  }
+  return results
+}
+
+const pickRandom = (list = []) => {
+  if (!list.length) return []
+  const copy = [...list]
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
 
 const start = async () => {
   await mongoose.connect(MONGO_URI)
