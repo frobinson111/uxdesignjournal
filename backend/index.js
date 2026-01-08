@@ -36,6 +36,8 @@ const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null
 const upload = multer({ storage: multer.memoryStorage() })
 const app = express()
 
+const APP_VERSION = '2.0.0'
+
 // CORS - allow Vercel frontend and localhost for dev
 const allowedOrigins = [
   'https://uxdesignjournal.vercel.app',
@@ -55,6 +57,20 @@ app.use(cors({
   credentials: true,
 }))
 app.use(bodyParser.json())
+
+// Version/health (useful for verifying production deploy is on latest backend)
+app.get('/api/public/version', (_req, res) => {
+  res.json({
+    app: 'uxdesignjournal-backend',
+    version: APP_VERSION,
+    commit:
+      process.env.RAILWAY_GIT_COMMIT_SHA ||
+      process.env.GIT_COMMIT_SHA ||
+      process.env.VERCEL_GIT_COMMIT_SHA ||
+      null,
+    now: new Date().toISOString(),
+  })
+})
 
 // Helper to upload image to Cloudinary
 async function uploadToCloudinary(imageUrl, slug) {
