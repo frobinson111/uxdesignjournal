@@ -1,11 +1,12 @@
 {
   "name": "backend",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "main": "index.js",
   "scripts": {
     "dev": "node index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "postinstall": "echo 'Backend v2.0.0 installed successfully'"
   },
   "keywords": [],
   "author": "",
