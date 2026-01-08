@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { fetchArticle, fetchHomepage } from '../api/public'
-import type { Article, ArticlePayload } from '../types'
+import type { AdSlot, Article, ArticlePayload } from '../types'
 import { AdSlotRenderer } from '../components/AdSlotRenderer'
 
 type RecentItem = Pick<Article, 'slug' | 'title' | 'imageUrl' | 'category' | 'date'>
@@ -95,7 +95,7 @@ export function ArticlePage() {
   const pickOne = <T,>(arr: T[] = []) => (arr.length ? arr[Math.floor(Math.random() * arr.length)] : undefined)
   const inlineAds = data.ads?.inline || []
   const readMoreAd = pickOne(inlineAds.filter((ad) => ad.size === '728x250' || ad.placement === 'article-readmore'))
-  const readMoreSlot = readMoreAd || {
+  const readMoreSlot: AdSlot = readMoreAd || {
     id: 'article-readmore-placeholder',
     type: 'IMAGE_LINK',
     imageUrl: 'https://via.placeholder.com/728x250?text=Ad+728x250',
@@ -104,7 +104,7 @@ export function ArticlePage() {
     alt: '728x250 ad',
   }
 
-  const sidebarSlots = (data.ads?.sidebar?.length ? data.ads.sidebar : [{
+  const sidebarSlots: AdSlot[] = (data.ads?.sidebar?.length ? data.ads.sidebar : [{
     id: 'article-sidebar-placeholder',
     type: 'IMAGE_LINK',
     imageUrl: 'https://via.placeholder.com/300x600?text=Ad+300x600',
