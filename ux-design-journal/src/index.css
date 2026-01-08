@@ -630,6 +630,25 @@ footer{
 .category-header h1{ margin: 6px 0 8px; }
 .muted{ color:var(--muted); }
 
+/* Prose (static pages like About / Editorial) */
+.prose{
+  max-width: 820px;
+}
+.prose h2{
+  margin: 22px 0 10px;
+}
+.prose h3{
+  margin: 18px 0 8px;
+}
+.prose p{
+  margin: 0 0 14px;
+  color:#222;
+}
+.prose ul{
+  margin: 0 0 14px;
+  padding-left: 22px;
+}
+
 .category-layout{
   display:grid;
   grid-template-columns: 1fr 320px;
