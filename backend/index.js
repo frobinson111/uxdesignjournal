@@ -614,8 +614,8 @@ app.post('/api/admin/ai/regenerate-image/:slug', async (req, res) => {
     article.imageUrl = cloudinaryUrl
     await article.save()
     console.log('✓ Image regenerated and saved:', cloudinaryUrl)
-    console.log('Image regen success for', article.slug, '->', imageUrl)
-    res.json({ imageUrl })
+    console.log('Image regen success for', article.slug, '->', cloudinaryUrl)
+    res.json({ imageUrl: cloudinaryUrl })
   } catch (err) {
     console.error('Image regen failed', err?.message || err)
     const fallback = fallbackImage(article.slug)
