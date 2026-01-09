@@ -13,6 +13,26 @@ export function AdminLayout() {
     { to: '/admin/users', label: 'Users' },
   ]
 
+  const isLinkActive = (linkPath: string): boolean => {
+    // Exact match for Dashboard
+    if (linkPath === '/admin') {
+      return pathname === '/admin'
+    }
+    
+    // Exact match for New Article
+    if (linkPath === '/admin/articles/new') {
+      return pathname === '/admin/articles/new'
+    }
+    
+    // Articles link is active for /articles and /articles/:slug (edit), but not /articles/new
+    if (linkPath === '/admin/articles') {
+      return pathname.startsWith('/admin/articles') && pathname !== '/admin/articles/new'
+    }
+    
+    // Exact match for all other links
+    return pathname === linkPath
+  }
+
   return (
     <div className="admin-shell">
       <aside className="admin-nav">
@@ -20,7 +40,7 @@ export function AdminLayout() {
         <nav>
           <ul>
             {links.map((l) => (
-              <li key={l.to} className={pathname.startsWith(l.to.replace('/new','')) ? 'active' : ''}>
+              <li key={l.to} className={isLinkActive(l.to) ? 'active' : ''}>
                 <Link to={l.to}>{l.label}</Link>
               </li>
             ))}
