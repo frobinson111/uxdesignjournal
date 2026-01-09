@@ -441,6 +441,31 @@ app.post('/api/admin/uploads', upload.single('file'), (req, res) => {
   res.json({ url: `https://images.example.com/${Date.now()}-${filename}` })
 })
 
+// Helper function to generate contextual image prompt based on article content
+function generateImagePrompt(title, dek, excerpt, bodyMarkdown, category) {
+  // Build category-aware context
+  const categoryContext = {
+    'practice': 'UX design methodology, user research, and design best practices',
+    'design-reviews': 'design critique, UX analysis, and design thinking',
+    'career': 'professional development, design careers, and workplace insights',
+    'signals': 'industry trends, emerging patterns, and design signals',
+    'journal': 'personal design observations, reflections, and stories',
+  }[category] || 'UX design and user experience'
+
+  // Combine article metadata to provide content context
+  const contentSummary = `${dek || excerpt || ''}`.slice(0, 250)
+  const bodySnippet = bodyMarkdown ? bodyMarkdown.slice(0, 400) : ''
+  const keyContext = `${contentSummary} ${bodySnippet}`.trim()
+
+  return `A black and white stipple engraving portrait in the exact style of Wall Street Journal Hedcut illustrations. The image must use only tiny black ink dots (stippling technique) and fine crosshatch lines on a pure white background to create the portrait. No solid black fills, no gradients, no shading, no gray tones - only individual black dots of varying density. High contrast. Hand-drawn stipple dot technique. 
+
+Article Title: "${title}"
+Category Theme: ${categoryContext}
+Article Summary: "${contentSummary}"
+
+The illustration should be a conceptual editorial portrait that visually represents the core ideas and themes of this article about "${keyContext}". Must look like it was hand-engraved for a 1980s newspaper. Reference: classic WSJ Hedcut portraits by Kevin Sprouls.`
+}
+
 // AI generate article
 app.post('/api/admin/ai/generate', async (req, res) => {
   if (!openai) return res.status(500).json({ message: 'OPENAI_API_KEY not configured' })
@@ -479,7 +504,7 @@ app.post('/api/admin/ai/generate', async (req, res) => {
     console.log('Generating Hedcut image for:', parsed.title || 'UX design')
     const img = await openai.images.generate({
       model: 'dall-e-3',
-      prompt: `A black and white stipple engraving portrait in the exact style of Wall Street Journal Hedcut illustrations. The image must use only tiny black ink dots (stippling technique) and fine crosshatch lines on a pure white background to create the portrait. No solid black fills, no gradients, no shading, no gray tones - only individual black dots of varying density. High contrast. Hand-drawn stipple dot technique. The subject should be a conceptual editorial illustration related to "${parsed.title || 'UX design'}". Must look like it was hand-engraved for a 1980s newspaper. Reference: classic WSJ Hedcut portraits by Kevin Sprouls.`,
+      prompt: generateImagePrompt(parsed.title || 'UX design', parsed.dek, parsed.excerpt, parsed.body_markdown, category),
       size: '1024x1024',
       quality: 'hd',
       style: 'natural',
@@ -536,7 +561,7 @@ app.post('/api/admin/ai/regenerate-image/:slug', async (req, res) => {
     console.log('Regenerating Hedcut image for:', article.title)
     const img = await openai.images.generate({
       model: 'dall-e-3',
-      prompt: `A black and white stipple engraving portrait in the exact style of Wall Street Journal Hedcut illustrations. The image must use only tiny black ink dots (stippling technique) and fine crosshatch lines on a pure white background to create the portrait. No solid black fills, no gradients, no shading, no gray tones - only individual black dots of varying density. High contrast. Hand-drawn stipple dot technique. The subject should be a conceptual editorial illustration related to "${article.title || 'UX design'}". Must look like it was hand-engraved for a 1980s newspaper. Reference: classic WSJ Hedcut portraits by Kevin Sprouls.`,
+      prompt: generateImagePrompt(article.title, article.dek, article.excerpt, article.bodyMarkdown, article.category),
       size: '1024x1024',
       quality: 'hd',
       style: 'natural',
