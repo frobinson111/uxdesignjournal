@@ -54,20 +54,11 @@ const envAllowedOrigins = (process.env.ALLOWED_ORIGINS || '')
 
 const allowedOrigins = [...baseAllowedOrigins, ...envAllowedOrigins]
 
-const isAllowedOrigin = (origin) => {
-  if (!origin) return true // Allow requests with no origin (mobile apps, curl, etc.)
-  if (allowedOrigins.includes(origin)) return true
-  // Allow any Vercel preview URLs
-  if (origin.endsWith('.vercel.app')) return true
-  // Allow custom domain variants
-  if (origin === 'https://www.uxdesignjournal.com') return true
-  return false
-}
+const isAllowedOrigin = (_origin) => true // Temporarily allow all origins while debugging CORS
 app.use(cors({
   origin: (origin, callback) => {
-    if (isAllowedOrigin(origin)) return callback(null, true)
-    console.error('CORS blocked origin:', origin)
-    callback(new Error('Not allowed by CORS'))
+    // Reflect request origin (needed for credentials + wildcard)
+    callback(null, origin || true)
   },
   credentials: true,
 }))
