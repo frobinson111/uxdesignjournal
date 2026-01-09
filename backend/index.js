@@ -64,6 +64,15 @@ app.use(cors({
 }))
 app.use(bodyParser.json())
 
+// Health check for Railway
+app.get('/health', (_req, res) => {
+  res.status(200).json({ ok: true, uptime: process.uptime() })
+})
+
+app.get('/', (_req, res) => {
+  res.status(200).json({ app: 'uxdesignjournal-backend', status: 'running' })
+})
+
 // Version/health (useful for verifying production deploy is on latest backend)
 app.get('/api/public/version', (_req, res) => {
   res.json({
@@ -653,8 +662,9 @@ const start = async () => {
   console.log('Connected to Mongo')
   await ensureAdmin()
   await seedArticles()
-  app.listen(PORT, () => {
-    console.log(`Backend running on http://localhost:${PORT}`)
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Backend running on http://0.0.0.0:${PORT}`)
+    console.log(`Health check: http://0.0.0.0:${PORT}/api/public/version`)
   })
 }
 
