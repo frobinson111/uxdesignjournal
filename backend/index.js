@@ -772,6 +772,11 @@ const safeImageUrl = (doc) => {
   const url = doc?.imageUrl || ''
   if (!url) return fallbackImage(doc?.slug || 'placeholder')
   
+  // Block temporary OpenAI URLs (they expire)
+  if (url.includes('blob.core.windows.net') || url.includes('oaidalleapiprodscus')) {
+    return fallbackImage(doc?.slug || 'placeholder')
+  }
+  
   // Allow Cloudinary URLs
   if (url.includes('cloudinary.com') || url.includes('res.cloudinary.com')) return url
   
