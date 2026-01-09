@@ -148,4 +148,3 @@ export async function adminDeleteAd(token: string, id: string) {
     headers: { Authorization: `Bearer ${token}` },
   })
 }
-
