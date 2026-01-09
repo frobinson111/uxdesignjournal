@@ -476,17 +476,13 @@ app.post('/api/admin/ai/generate', async (req, res) => {
     const slugBase = parsed.title ? slugify(parsed.title) : slugify(uuid())
     let imageUrl = ''
     try {
+    console.log('Generating Hedcut image for:', parsed.title || 'UX design')
     const img = await openai.images.generate({
       model: 'dall-e-3',
-      prompt: [
-        'Create a classic Wall Street Journal Hedcut portrait illustration.',
-        'Style: hand-drawn stipple dot technique, thousands of tiny black ink dots on pure white background.',
-        'Use crosshatching for shadows, no solid fills, no gradients, no grayscale washes, no color.',
-        'Subject: a conceptual scene related to "', parsed.title || 'UX design', '".',
-        'Must look exactly like a traditional newspaper Hedcut engraving — monochromatic black dots on white, high contrast, editorial illustration style.',
-        'Avoid photographic, 3D, vector, cartoon, or digital-painting looks.',
-      ].join(' '),
+      prompt: `A black and white stipple engraving portrait in the exact style of Wall Street Journal Hedcut illustrations. The image must use only tiny black ink dots (stippling technique) and fine crosshatch lines on a pure white background to create the portrait. No solid black fills, no gradients, no shading, no gray tones - only individual black dots of varying density. High contrast. Hand-drawn stipple dot technique. The subject should be a conceptual editorial illustration related to "${parsed.title || 'UX design'}". Must look like it was hand-engraved for a 1980s newspaper. Reference: classic WSJ Hedcut portraits by Kevin Sprouls.`,
       size: '1024x1024',
+      quality: 'hd',
+      style: 'natural',
     })
       const tempUrl = img.data?.[0]?.url || ''
       if (!tempUrl) throw new Error('No image URL returned from OpenAI')
@@ -535,17 +531,13 @@ app.post('/api/admin/ai/regenerate-image/:slug', async (req, res) => {
   if (!article) return res.status(404).json({ message: 'Article not found' })
 
   try {
+    console.log('Regenerating Hedcut image for:', article.title)
     const img = await openai.images.generate({
       model: 'dall-e-3',
-      prompt: [
-        'Create a classic Wall Street Journal Hedcut portrait illustration.',
-        'Style: hand-drawn stipple dot technique, thousands of tiny black ink dots on pure white background.',
-        'Use crosshatching for shadows, no solid fills, no gradients, no grayscale washes, no color.',
-        'Subject: a conceptual scene related to "', article.title || 'UX design', '".',
-        'Must look exactly like a traditional newspaper Hedcut engraving — monochromatic black dots on white, high contrast, editorial illustration style.',
-        'Avoid photographic, 3D, vector, cartoon, or digital-painting looks.',
-      ].join(' '),
+      prompt: `A black and white stipple engraving portrait in the exact style of Wall Street Journal Hedcut illustrations. The image must use only tiny black ink dots (stippling technique) and fine crosshatch lines on a pure white background to create the portrait. No solid black fills, no gradients, no shading, no gray tones - only individual black dots of varying density. High contrast. Hand-drawn stipple dot technique. The subject should be a conceptual editorial illustration related to "${article.title || 'UX design'}". Must look like it was hand-engraved for a 1980s newspaper. Reference: classic WSJ Hedcut portraits by Kevin Sprouls.`,
       size: '1024x1024',
+      quality: 'hd',
+      style: 'natural',
     })
     const tempUrl = img.data?.[0]?.url
     if (!tempUrl) throw new Error('No image URL returned from OpenAI')
