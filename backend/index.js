@@ -162,9 +162,16 @@ const AdSchema = new mongoose.Schema({
   order: { type: Number, default: 0 },
 }, { timestamps: true })
 
+const SubscriberSchema = new mongoose.Schema({
+  email: { type: String, unique: true, required: true },
+  status: { type: String, default: 'active' }, // 'active' | 'unsubscribed'
+  source: { type: String, default: 'newsletter-form' },
+}, { timestamps: true })
+
 const User = mongoose.model('User', UserSchema)
 const Article = mongoose.model('Article', ArticleSchema)
 const Ad = mongoose.model('Ad', AdSchema)
+const Subscriber = mongoose.model('Subscriber', SubscriberSchema)
 
 // Seed admin
 const ensureAdmin = async () => {
@@ -330,6 +337,102 @@ app.delete('/api/admin/ads/:id', async (req, res) => {
   const deleted = await Ad.findByIdAndDelete(req.params.id)
   if (!deleted) return res.status(404).json({ message: 'Not found' })
   res.json({ ok: true })
+})
+
+// Admin stats
+app.get('/api/admin/stats', async (_req, res) => {
+  try {
+    const [subscribersCount, articlesCount, adsCount, adminsCount] = await Promise.all([
+      Subscriber.countDocuments({ status: 'active' }),
+      Article.countDocuments({}),
+      Ad.countDocuments({}),
+      User.countDocuments({ role: 'admin' }),
+    ])
+    
+    const recentArticles = await Article.find({}).sort({ createdAt: -1 }).limit(6).select('title slug createdAt').lean()
+    const recentSubscribers = await Subscriber.find({}).sort({ createdAt: -1 }).limit(4).select('email createdAt').lean()
+    
+    // Simple trend data (last 7 days vs previous 7 days)
+    const now = new Date()
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+    
+    const [subsRecent, subsPrevious, articlesRecent, articlesPrevious] = await Promise.all([
+      Subscriber.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+      Subscriber.countDocuments({ createdAt: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo } }),
+      Article.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+      Article.countDocuments({ createdAt: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo } }),
+    ])
+    
+    res.json({
+      subscribers: subscribersCount,
+      articles: articlesCount,
+      categories: categories.length,
+      ads: adsCount,
+      admins: adminsCount,
+      recentEvents: [
+        ...recentArticles.map((a) => ({ type: 'article', title: a.title, slug: a.slug, date: a.createdAt })),
+        ...recentSubscribers.map((s) => ({ type: 'subscriber', email: s.email, date: s.createdAt })),
+      ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10),
+      trends: {
+        subscribers: { current: subsRecent, previous: subsPrevious },
+        articles: { current: articlesRecent, previous: articlesPrevious },
+      },
+    })
+  } catch (err) {
+    console.error('Stats error:', err)
+    res.status(500).json({ message: 'Could not load stats' })
+  }
+})
+
+// Admin subscribers CRUD
+app.get('/api/admin/subscribers', async (req, res) => {
+  const page = Number(req.query.page) || 1
+  const limit = 20
+  const q = (req.query.q || '').toString().trim()
+  const filter = q ? { email: { $regex: q, $options: 'i' } } : {}
+  const total = await Subscriber.countDocuments(filter)
+  const items = await Subscriber.find(filter)
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean()
+  res.json({
+    items: items.map((s) => ({
+      id: s._id,
+      email: s.email,
+      status: s.status,
+      source: s.source,
+      subscribedAt: s.createdAt,
+    })),
+    page,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+    total,
+  })
+})
+
+app.put('/api/admin/subscribers/:email', async (req, res) => {
+  const { status } = req.body || {}
+  const updated = await Subscriber.findOneAndUpdate(
+    { email: req.params.email },
+    { status },
+    { new: true }
+  )
+  if (!updated) return res.status(404).json({ message: 'Not found' })
+  res.json(updated)
+})
+
+app.delete('/api/admin/subscribers/:email', async (req, res) => {
+  const deleted = await Subscriber.findOneAndDelete({ email: req.params.email })
+  if (!deleted) return res.status(404).json({ message: 'Not found' })
+  res.json({ ok: true })
+})
+
+app.post('/api/admin/subscribers/bulk-delete', async (req, res) => {
+  const { emails } = req.body || {}
+  if (!Array.isArray(emails)) return res.status(400).json({ message: 'emails array required' })
+  const result = await Subscriber.deleteMany({ email: { $in: emails } })
+  res.json({ deleted: result.deletedCount })
 })
 
 // Upload mock
@@ -574,8 +677,27 @@ app.get('/api/public/search', async (req, res) => {
   })
 })
 
-app.post('/api/public/subscribe', (_req, res) => {
-  res.json({ success: true, message: 'Subscribed.' })
+app.post('/api/public/subscribe', async (req, res) => {
+  const { email, source = 'newsletter-form' } = req.body || {}
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ success: false, message: 'Valid email required.' })
+  }
+  try {
+    const existing = await Subscriber.findOne({ email })
+    if (existing) {
+      if (existing.status === 'unsubscribed') {
+        existing.status = 'active'
+        await existing.save()
+        return res.json({ success: true, message: 'Resubscribed successfully.' })
+      }
+      return res.json({ success: true, message: 'Already subscribed.' })
+    }
+    await Subscriber.create({ email, source, status: 'active' })
+    res.json({ success: true, message: 'Subscribed successfully.' })
+  } catch (err) {
+    console.error('Subscribe error:', err)
+    res.status(500).json({ success: false, message: 'Subscription failed.' })
+  }
 })
 
 app.post('/api/public/session/heartbeat', (_req, res) => {

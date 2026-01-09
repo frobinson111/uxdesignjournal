@@ -78,6 +78,46 @@ export async function adminUpdateArticleFields(token: string, slug: string, fiel
   })
 }
 
+export async function adminGetStats(token: string) {
+  return request<import('../types').AdminStats>('/api/admin/stats', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function adminListSubscribers(token: string, params: { page?: number; q?: string } = {}) {
+  const search = new URLSearchParams()
+  if (params.page) search.set('page', String(params.page))
+  if (params.q) search.set('q', params.q)
+  const qs = search.toString()
+  const path = `/api/admin/subscribers${qs ? `?${qs}` : ''}`
+  return request<import('../types').AdminSubscribersResponse>(path, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function adminUpdateSubscriber(token: string, email: string, fields: { status?: string }) {
+  return request(`/api/admin/subscribers/${encodeURIComponent(email)}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(fields),
+  })
+}
+
+export async function adminDeleteSubscriber(token: string, email: string) {
+  return request(`/api/admin/subscribers/${encodeURIComponent(email)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function adminBulkDeleteSubscribers(token: string, emails: string[]) {
+  return request<{ deleted: number }>('/api/admin/subscribers/bulk-delete', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ emails }),
+  })
+}
+
 export async function adminDeleteArticle(token: string, slug: string) {
   return request<{ ok: boolean }>(`/api/admin/articles/${slug}`, {
     method: 'DELETE',

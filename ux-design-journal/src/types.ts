@@ -104,3 +104,37 @@ export interface AdminArticlesResponse {
   totalPages: number
 }
 
+export interface Subscriber {
+  id: string
+  email: string
+  status: 'active' | 'unsubscribed'
+  source?: string
+  subscribedAt: string
+}
+
+export interface AdminSubscribersResponse {
+  items: Subscriber[]
+  page: number
+  totalPages: number
+  total: number
+}
+
+export interface AdminStats {
+  subscribers: number
+  articles: number
+  categories: number
+  ads: number
+  admins: number
+  recentEvents: Array<{
+    type: 'article' | 'subscriber'
+    title?: string
+    slug?: string
+    email?: string
+    date: string
+  }>
+  trends: {
+    subscribers: { current: number; previous: number }
+    articles: { current: number; previous: number }
+  }
+}
+

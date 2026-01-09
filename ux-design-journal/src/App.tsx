@@ -19,6 +19,8 @@ import { AdminArticlesList } from './pages/admin/AdminArticlesList'
 import { AdminArticleEdit } from './pages/admin/AdminArticleEdit'
 import { AdminAIGenerate } from './pages/admin/AdminAIGenerate'
 import { AdminAds } from './pages/admin/AdminAds'
+import { AdminDashboard } from './pages/admin/AdminDashboard'
+import { AdminUsers } from './pages/admin/AdminUsers'
 
 function App() {
   const { categories } = useCategories()
@@ -39,11 +41,13 @@ function App() {
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/admin/*" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
               <Route path="articles" element={<AdminArticlesList />} />
               <Route path="articles/new" element={<AdminArticleEdit />} />
               <Route path="articles/:slug" element={<AdminArticleEdit />} />
               <Route path="ai" element={<AdminAIGenerate />} />
               <Route path="ads" element={<AdminAds />} />
+              <Route path="users" element={<AdminUsers />} />
             </Route>
           </Route>
         </Routes>

@@ -5,10 +5,12 @@ export function AdminLayout() {
   const { email, logout } = useAuth()
   const { pathname } = useLocation()
   const links = [
+    { to: '/admin', label: 'Dashboard' },
     { to: '/admin/articles', label: 'Articles' },
     { to: '/admin/articles/new', label: 'New Article' },
     { to: '/admin/ai', label: 'Generate with AI' },
     { to: '/admin/ads', label: 'Ads' },
+    { to: '/admin/users', label: 'Users' },
   ]
 
   return (
