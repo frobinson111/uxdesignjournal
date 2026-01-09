@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { adminListSubscribers, adminUpdateSubscriber, adminDeleteSubscriber, adminBulkDeleteSubscribers } from '../../api/admin'
+import { adminListSubscribers, adminDeleteSubscriber, adminBulkDeleteSubscribers } from '../../api/admin'
 import type { Subscriber } from '../../types'
 import { useAuth } from '../../auth/AuthContext'
 

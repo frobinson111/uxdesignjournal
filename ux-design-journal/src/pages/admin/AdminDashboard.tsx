@@ -49,11 +49,8 @@ export function AdminDashboard() {
       <div className="stats-grid">
         {cards.map((card) => {
           const trendPercent = getTrendPercent(card.trend)
-          const CardWrapper = card.link ? Link : 'div'
-          const wrapperProps = card.link ? { to: card.link, className: 'stat-card clickable' } : { className: 'stat-card' }
-
-          return (
-            <CardWrapper key={card.label} {...wrapperProps}>
+          const cardContent = (
+            <>
               <div className="stat-label">{card.label}</div>
               <div className="stat-value">{card.value}</div>
               {trendPercent !== null && (
@@ -79,7 +76,17 @@ export function AdminDashboard() {
                   />
                 </div>
               )}
-            </CardWrapper>
+            </>
+          )
+
+          return card.link ? (
+            <Link key={card.label} to={card.link} className="stat-card clickable">
+              {cardContent}
+            </Link>
+          ) : (
+            <div key={card.label} className="stat-card">
+              {cardContent}
+            </div>
           )
         })}
       </div>
