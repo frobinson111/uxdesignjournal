@@ -87,22 +87,35 @@ app.get('/api/public/version', (_req, res) => {
   })
 })
 
+// Helper to check if URL is temporary (from OpenAI Azure blob storage)
+function isTemporaryImageUrl(url) {
+  if (!url) return false
+  return url.includes('blob.core.windows.net') || url.includes('oaidalleapiprodscus')
+}
+
 // Helper to upload image to Cloudinary
 async function uploadToCloudinary(imageUrl, slug) {
-  if (!process.env.CLOUDINARY_CLOUD_NAME) {
-    console.warn('Cloudinary not configured, returning source image URL')
-    return imageUrl || null
+  if (!imageUrl) {
+    console.error('Cannot upload image: no URL provided')
+    return null
   }
+  
+  if (!process.env.CLOUDINARY_CLOUD_NAME) {
+    console.error('CRITICAL: Cloudinary not configured. Cannot save images permanently.')
+    return null
+  }
+  
   try {
+    console.log('Uploading image to Cloudinary for:', slug)
     const result = await cloudinary.uploader.upload(imageUrl, {
       public_id: `uxdj/${slug}-${Date.now()}`,
       folder: 'uxdesignjournal',
       transformation: [{ width: 1024, height: 1024, crop: 'limit' }],
     })
-    console.log('Uploaded to Cloudinary:', result.secure_url)
+    console.log('✓ Successfully uploaded to Cloudinary:', result.secure_url)
     return result.secure_url
   } catch (err) {
-    console.error('Cloudinary upload failed:', err?.message || err)
+    console.error('✗ Cloudinary upload FAILED:', err?.message || err)
     return null
   }
 }
@@ -501,25 +514,39 @@ app.post('/api/admin/ai/generate', async (req, res) => {
     const slugBase = parsed.title ? slugify(parsed.title) : slugify(uuid())
     let imageUrl = ''
     try {
-    console.log('Generating Hedcut image for:', parsed.title || 'UX design')
-    const img = await openai.images.generate({
-      model: 'dall-e-3',
-      prompt: generateImagePrompt(parsed.title || 'UX design', parsed.dek, parsed.excerpt, parsed.body_markdown, category),
-      size: '1024x1024',
-      quality: 'hd',
-      style: 'natural',
-    })
+      console.log('Generating Hedcut image for:', parsed.title || 'UX design')
+      const img = await openai.images.generate({
+        model: 'dall-e-3',
+        prompt: generateImagePrompt(parsed.title || 'UX design', parsed.dek, parsed.excerpt, parsed.body_markdown, category),
+        size: '1024x1024',
+        quality: 'hd',
+        style: 'natural',
+      })
       const tempUrl = img.data?.[0]?.url || ''
       if (!tempUrl) throw new Error('No image URL returned from OpenAI')
-      console.log('OpenAI returned image URL:', tempUrl)
-      // Download and save permanently
+      console.log('OpenAI returned temporary image URL, uploading to Cloudinary...')
+      
+      // CRITICAL: Must upload to Cloudinary before storing in database
       const cloudinaryUrl = await uploadToCloudinary(tempUrl, slugBase)
-      imageUrl = cloudinaryUrl || tempUrl // Use OpenAI URL if Cloudinary fails
-      console.log('Image saved permanently:', imageUrl)
+      
+      // VALIDATION: Never store temporary OpenAI URLs
+      if (!cloudinaryUrl) {
+        console.error('✗ CRITICAL: Cloudinary upload failed. Cannot proceed without permanent storage.')
+        throw new Error('Image upload to permanent storage (Cloudinary) failed. Please check Cloudinary configuration.')
+      }
+      
+      if (isTemporaryImageUrl(cloudinaryUrl)) {
+        console.error('✗ CRITICAL: Attempted to store temporary OpenAI URL in database:', cloudinaryUrl)
+        throw new Error('Validation failed: Cannot store temporary image URLs')
+      }
+      
+      imageUrl = cloudinaryUrl
+      console.log('✓ Image permanently stored:', imageUrl)
     } catch (err) {
-      console.error('Image gen failed', err?.message || err)
-      console.error('OpenAI error details:', err)
+      console.error('✗ Image generation failed:', err?.message || err)
+      console.error('Details:', err)
       imageUrl = fallbackImage(slugBase)
+      console.warn('Using fallback placeholder image due to generation failure')
     }
 
     let slug = slugBase
@@ -568,14 +595,25 @@ app.post('/api/admin/ai/regenerate-image/:slug', async (req, res) => {
     })
     const tempUrl = img.data?.[0]?.url
     if (!tempUrl) throw new Error('No image URL returned from OpenAI')
-    console.log('OpenAI returned image URL for regen:', tempUrl)
+    console.log('OpenAI returned temporary image URL for regen, uploading to Cloudinary...')
     
-    // Download and save permanently
+    // CRITICAL: Must upload to Cloudinary before storing in database
     const cloudinaryUrl = await uploadToCloudinary(tempUrl, article.slug)
-    const imageUrl = cloudinaryUrl || tempUrl // Use OpenAI URL if Cloudinary fails
     
-    article.imageUrl = imageUrl
+    // VALIDATION: Never store temporary OpenAI URLs
+    if (!cloudinaryUrl) {
+      console.error('✗ CRITICAL: Cloudinary upload failed during regeneration')
+      throw new Error('Image upload to permanent storage (Cloudinary) failed. Please check Cloudinary configuration.')
+    }
+    
+    if (isTemporaryImageUrl(cloudinaryUrl)) {
+      console.error('✗ CRITICAL: Attempted to store temporary OpenAI URL:', cloudinaryUrl)
+      throw new Error('Validation failed: Cannot store temporary image URLs')
+    }
+    
+    article.imageUrl = cloudinaryUrl
     await article.save()
+    console.log('✓ Image regenerated and saved:', cloudinaryUrl)
     console.log('Image regen success for', article.slug, '->', imageUrl)
     res.json({ imageUrl })
   } catch (err) {
