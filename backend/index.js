@@ -486,12 +486,14 @@ app.post('/api/admin/ai/generate', async (req, res) => {
     })
       const tempUrl = img.data?.[0]?.url || ''
       if (!tempUrl) throw new Error('No image URL returned from OpenAI')
+      console.log('OpenAI returned image URL:', tempUrl)
       // Download and save permanently
       const cloudinaryUrl = await uploadToCloudinary(tempUrl, slugBase)
-      imageUrl = cloudinaryUrl || fallbackImage(slugBase)
+      imageUrl = cloudinaryUrl || tempUrl // Use OpenAI URL if Cloudinary fails
       console.log('Image saved permanently:', imageUrl)
     } catch (err) {
       console.error('Image gen failed', err?.message || err)
+      console.error('OpenAI error details:', err)
       imageUrl = fallbackImage(slugBase)
     }
 
@@ -541,10 +543,11 @@ app.post('/api/admin/ai/regenerate-image/:slug', async (req, res) => {
     })
     const tempUrl = img.data?.[0]?.url
     if (!tempUrl) throw new Error('No image URL returned from OpenAI')
+    console.log('OpenAI returned image URL for regen:', tempUrl)
     
     // Download and save permanently
     const cloudinaryUrl = await uploadToCloudinary(tempUrl, article.slug)
-    const imageUrl = cloudinaryUrl || fallbackImage(article.slug)
+    const imageUrl = cloudinaryUrl || tempUrl // Use OpenAI URL if Cloudinary fails
     
     article.imageUrl = imageUrl
     await article.save()
@@ -555,7 +558,7 @@ app.post('/api/admin/ai/regenerate-image/:slug', async (req, res) => {
     const fallback = fallbackImage(article.slug)
     article.imageUrl = fallback
     await article.save()
-    res.status(200).json({ imageUrl: fallback, warning: 'OpenAI failed; using fallback image' })
+    res.status(200).json({ imageUrl: fallback, warning: 'OpenAI generation failed; using fallback image' })
   }
 })
 
