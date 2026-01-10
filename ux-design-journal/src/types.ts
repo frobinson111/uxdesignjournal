@@ -149,3 +149,32 @@ export interface AdminAIGenerateResponse {
   slug: string
   status: string
 }
+
+export interface ContactPayload {
+  name: string
+  email: string
+  phone?: string
+  subject: string
+  message: string
+}
+
+export interface Contact extends ContactPayload {
+  id: string
+  status: 'new' | 'read' | 'archived'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminContactsResponse {
+  contacts: Contact[]
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+}
+
+export interface ContactSubmitResponse {
+  success: boolean
+  message: string
+  contactId?: string
+}

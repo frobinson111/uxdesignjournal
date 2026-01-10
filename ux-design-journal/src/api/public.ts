@@ -5,6 +5,8 @@ import type {
   Category,
   CategoryPayload,
   HomepagePayload,
+  ContactPayload,
+  ContactSubmitResponse,
 } from '../types'
 import {
   normalizeArchive,
@@ -93,3 +95,6 @@ export function identifySession(email: string) {
   return postJson<{ ok: boolean }>('/api/public/session/identify', { email }, { mockResponse: { ok: true } })
 }
 
+export function submitContact(payload: ContactPayload) {
+  return postJson<ContactSubmitResponse>('/api/public/contact', payload)
+}

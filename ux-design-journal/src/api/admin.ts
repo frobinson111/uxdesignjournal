@@ -4,6 +4,8 @@ import type {
   AdminLoginResponse,
   ArticlePayload,
   AdSlot,
+  AdminContactsResponse,
+  Contact,
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
@@ -144,6 +146,34 @@ export async function adminSaveAd(token: string, payload: AdSlot & { placement: 
 
 export async function adminDeleteAd(token: string, id: string) {
   return request<{ ok: boolean }>(`/api/admin/ads/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function adminListContacts(token: string, params: { page?: number; limit?: number; search?: string; status?: string } = {}) {
+  const search = new URLSearchParams()
+  if (params.page) search.set('page', String(params.page))
+  if (params.limit) search.set('limit', String(params.limit))
+  if (params.search) search.set('search', params.search)
+  if (params.status) search.set('status', params.status)
+  const qs = search.toString()
+  const path = `/api/admin/contacts${qs ? `?${qs}` : ''}`
+  return request<AdminContactsResponse>(path, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function adminUpdateContact(token: string, id: string, fields: Partial<Contact>) {
+  return request<Contact>(`/api/admin/contacts/${id}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(fields),
+  })
+}
+
+export async function adminDeleteContact(token: string, id: string) {
+  return request<{ success: boolean; message: string }>(`/api/admin/contacts/${id}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   })

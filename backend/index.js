@@ -181,10 +181,26 @@ const SubscriberSchema = new mongoose.Schema({
   source: { type: String, default: 'newsletter-form' },
 }, { timestamps: true })
 
+const ContactSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  phone: { type: String, default: '' },
+  subject: { type: String, required: true },
+  message: { type: String, required: true },
+  status: { type: String, enum: ['new', 'read', 'archived'], default: 'new' },
+  ipAddress: { type: String, default: '' },
+}, { timestamps: true })
+
+// Index for search and pagination
+ContactSchema.index({ email: 1 })
+ContactSchema.index({ name: 1 })
+ContactSchema.index({ createdAt: -1 })
+
 const User = mongoose.model('User', UserSchema)
 const Article = mongoose.model('Article', ArticleSchema)
 const Ad = mongoose.model('Ad', AdSchema)
 const Subscriber = mongoose.model('Subscriber', SubscriberSchema)
+const Contact = mongoose.model('Contact', ContactSchema)
 
 // Seed admin
 const ensureAdmin = async () => {
@@ -800,6 +816,184 @@ app.post('/api/public/session/heartbeat', (_req, res) => {
 
 app.post('/api/public/session/identify', (_req, res) => {
   res.json({ ok: true })
+})
+
+// In-memory rate limiter for contact submissions (IP -> timestamps)
+const contactRateLimiter = new Map()
+
+// Helper: Get client IP
+const getClientIp = (req) => {
+  return req.headers['x-forwarded-for']?.split(',')[0].trim() || req.connection.remoteAddress || 'unknown'
+}
+
+// Helper: Check rate limit (5 submissions per IP per hour)
+const checkContactRateLimit = (ipAddress) => {
+  const now = Date.now()
+  const oneHourAgo = now - 60 * 60 * 1000
+  
+  if (!contactRateLimiter.has(ipAddress)) {
+    contactRateLimiter.set(ipAddress, [])
+  }
+  
+  let timestamps = contactRateLimiter.get(ipAddress)
+  timestamps = timestamps.filter((t) => t > oneHourAgo)
+  
+  if (timestamps.length >= 5) {
+    return false
+  }
+  
+  timestamps.push(now)
+  contactRateLimiter.set(ipAddress, timestamps)
+  return true
+}
+
+// Helper: Sanitize contact input
+const sanitizeContactInput = (input, maxLength = 500) => {
+  if (typeof input !== 'string') return ''
+  return input
+    .replace(/<[^>]*>/g, '') // Strip HTML tags
+    .trim()
+    .slice(0, maxLength)
+}
+
+// Contact form submission
+app.post('/api/public/contact', async (req, res) => {
+  const { name, email, phone = '', subject, message } = req.body || {}
+  const ipAddress = getClientIp(req)
+  
+  // Validate required fields
+  if (!name || !email || !subject || !message) {
+    return res.status(400).json({ success: false, message: 'Missing required fields: name, email, subject, message.' })
+  }
+  
+  // Validate email format
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ success: false, message: 'Valid email address required.' })
+  }
+  
+  // Check rate limit
+  if (!checkContactRateLimit(ipAddress)) {
+    return res.status(429).json({ success: false, message: 'Too many submissions. Please try again in an hour.' })
+  }
+  
+  try {
+    // Sanitize inputs
+    const sanitizedName = sanitizeContactInput(name, 100)
+    const sanitizedEmail = email.toLowerCase().trim()
+    const sanitizedPhone = sanitizeContactInput(phone, 20)
+    const sanitizedSubject = sanitizeContactInput(subject, 200)
+    const sanitizedMessage = sanitizeContactInput(message, 5000)
+    
+    // Validate sanitized inputs
+    if (!sanitizedName || !sanitizedSubject || !sanitizedMessage) {
+      return res.status(400).json({ success: false, message: 'Input validation failed.' })
+    }
+    
+    // Create contact record
+    const contact = await Contact.create({
+      name: sanitizedName,
+      email: sanitizedEmail,
+      phone: sanitizedPhone,
+      subject: sanitizedSubject,
+      message: sanitizedMessage,
+      ipAddress,
+      status: 'new',
+    })
+    
+    res.json({
+      success: true,
+      message: 'Thank you for reaching out. We will be in touch soon.',
+      contactId: contact._id,
+    })
+  } catch (err) {
+    console.error('Contact submission error:', err)
+    res.status(500).json({ success: false, message: 'Failed to submit contact form.' })
+  }
+})
+
+// Admin: Get all contacts with pagination and search
+app.get('/api/admin/contacts', async (req, res) => {
+  try {
+    const page = Number(req.query.page) || 1
+    const limit = Number(req.query.limit) || 20
+    const search = (req.query.search || '').toLowerCase()
+    const status = req.query.status || ''
+    const skip = (page - 1) * limit
+    
+    // Build filter
+    const filter = {}
+    if (search) {
+      filter.$or = [
+        { name: new RegExp(search, 'i') },
+        { email: new RegExp(search, 'i') },
+      ]
+    }
+    if (status && ['new', 'read', 'archived'].includes(status)) {
+      filter.status = status
+    }
+    
+    // Fetch contacts
+    const contacts = await Contact.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean()
+    
+    // Get total count
+    const total = await Contact.countDocuments(filter)
+    
+    res.json({
+      contacts,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    })
+  } catch (err) {
+    console.error('Get contacts error:', err)
+    res.status(500).json({ error: 'Failed to fetch contacts.' })
+  }
+})
+
+// Admin: Update contact status
+app.put('/api/admin/contacts/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body || {}
+    
+    // Validate status
+    if (!status || !['new', 'read', 'archived'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status required: new, read, or archived.' })
+    }
+    
+    // Update contact
+    const contact = await Contact.findByIdAndUpdate(id, { status }, { new: true })
+    if (!contact) {
+      return res.status(404).json({ error: 'Contact not found.' })
+    }
+    
+    res.json({ success: true, contact })
+  } catch (err) {
+    console.error('Update contact error:', err)
+    res.status(500).json({ error: 'Failed to update contact.' })
+  }
+})
+
+// Admin: Delete contact
+app.delete('/api/admin/contacts/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const contact = await Contact.findByIdAndDelete(id)
+    
+    if (!contact) {
+      return res.status(404).json({ error: 'Contact not found.' })
+    }
+    
+    res.json({ success: true, message: 'Contact deleted.' })
+  } catch (err) {
+    console.error('Delete contact error:', err)
+    res.status(500).json({ error: 'Failed to delete contact.' })
+  }
 })
 
 // Fallback image helper

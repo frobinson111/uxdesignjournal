@@ -9,6 +9,7 @@ import { SearchPage } from './pages/SearchPage'
 import { SubscribePage } from './pages/SubscribePage'
 import { EditorialPage } from './pages/EditorialPage'
 import { AboutPage } from './pages/AboutPage'
+import { ContactPage } from './pages/ContactPage'
 import { useCategories } from './hooks/useCategories'
 import { useEngagedTimer } from './hooks/useEngagedTimer'
 import { EmailGateModal } from './components/EmailGateModal'
@@ -19,6 +20,7 @@ import { AdminArticlesList } from './pages/admin/AdminArticlesList'
 import { AdminArticleEdit } from './pages/admin/AdminArticleEdit'
 import { AdminAIGenerate } from './pages/admin/AdminAIGenerate'
 import { AdminAds } from './pages/admin/AdminAds'
+import { AdminContacts } from './pages/admin/AdminContacts'
 import { AdminDashboard } from './pages/admin/AdminDashboard'
 import { AdminUsers } from './pages/admin/AdminUsers'
 
@@ -36,6 +38,7 @@ function App() {
           <Route path="/subscribe" element={<SubscribePage />} />
           <Route path="/editorial" element={<EditorialPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route path="/article/:slug" element={<ArticlePage />} />
           <Route path="/:categorySlug" element={<CategoryPage />} />
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -47,6 +50,7 @@ function App() {
               <Route path="articles/:slug" element={<AdminArticleEdit />} />
               <Route path="ai" element={<AdminAIGenerate />} />
               <Route path="ads" element={<AdminAds />} />
+              <Route path="contacts" element={<AdminContacts />} />
               <Route path="users" element={<AdminUsers />} />
             </Route>
           </Route>

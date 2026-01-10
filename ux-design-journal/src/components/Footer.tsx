@@ -16,6 +16,7 @@ export function Footer({ categories }: Props) {
             <ul className="footer-links">
               <li><a href="/about">About the Publication</a></li>
               <li><a href="/editorial">Editorial Principles</a></li>
+              <li><a href="/contact">Contact</a></li>
             </ul>
           </div>
 
