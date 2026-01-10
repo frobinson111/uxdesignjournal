@@ -1,4 +1,3 @@
-import frankImage from '../assets/images/founder/frank-robinson.svg'
 
 
 export function AboutPage() {
