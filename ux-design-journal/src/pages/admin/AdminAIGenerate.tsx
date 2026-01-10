@@ -11,6 +11,7 @@ export function AdminAIGenerate() {
   const { categories } = useCategories()
   const [category, setCategory] = useState('practice')
   const [sourceUrl, setSourceUrl] = useState('')
+  const [topic, setTopic] = useState('')
   const [mode, setMode] = useState<'rewrite' | 'from-scratch'>('rewrite')
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [error, setError] = useState('')
@@ -30,7 +31,7 @@ export function AdminAIGenerate() {
     setStatus('loading')
     setError('')
     try {
-      const res = await adminGenerateAI(token, { category, sourceUrl: sourceUrl || undefined, mode })
+      const res = await adminGenerateAI(token, { category, topic: topic || undefined, sourceUrl: sourceUrl || undefined, mode })
       navigate(`/admin/articles/${res.slug}`)
     } catch (err) {
       console.error(err)
@@ -54,6 +55,15 @@ export function AdminAIGenerate() {
               <option key={c.slug} value={c.slug}>{c.slug}</option>
             ))}
           </select>
+        </label>
+        <label>
+          Topic (optional)
+          <input
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="Short topic to focus the article (max 120 chars)"
+            maxLength={120}
+          />
         </label>
         <label>
           Source URL (optional for rewrite)

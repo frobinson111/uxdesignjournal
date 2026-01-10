@@ -55,7 +55,7 @@ export async function adminUploadImage(token: string, file: File) {
   return (await res.json()) as { url: string }
 }
 
-export async function adminGenerateAI(token: string, payload: { category: string; sourceUrl?: string; mode?: string }) {
+export async function adminGenerateAI(token: string, payload: { category: string; topic?: string; sourceUrl?: string; mode?: string }) {
   return request<{ slug: string; status: string }>('/api/admin/ai/generate', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },

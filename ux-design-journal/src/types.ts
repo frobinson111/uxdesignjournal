@@ -137,3 +137,15 @@ export interface AdminStats {
     articles: { current: number; previous: number }
   }
 }
+
+export interface AdminAIGenerateRequest {
+  category: string
+  topic?: string
+  sourceUrl?: string
+  mode?: 'rewrite' | 'from-scratch'
+}
+
+export interface AdminAIGenerateResponse {
+  slug: string
+  status: string
+}

@@ -455,7 +455,7 @@ app.post('/api/admin/uploads', upload.single('file'), (req, res) => {
 })
 
 // Helper function to generate contextual image prompt based on article content
-function generateImagePrompt(title, dek, excerpt, bodyMarkdown, category) {
+function generateImagePrompt(title, dek, excerpt, bodyMarkdown, category, topic) {
   // Build category-aware context
   const categoryContext = {
     'practice': 'UX design methodology, user research, and design best practices',
@@ -469,21 +469,52 @@ function generateImagePrompt(title, dek, excerpt, bodyMarkdown, category) {
   const contentSummary = `${dek || excerpt || ''}`.slice(0, 250)
   const bodySnippet = bodyMarkdown ? bodyMarkdown.slice(0, 400) : ''
   const keyContext = `${contentSummary} ${bodySnippet}`.trim()
+  const topicContext = topic ? ` Topic: ${topic}` : ''
 
   return `A black and white stipple engraving portrait in the exact style of Wall Street Journal Hedcut illustrations. The image must use only tiny black ink dots (stippling technique) and fine crosshatch lines on a pure white background to create the portrait. No solid black fills, no gradients, no shading, no gray tones - only individual black dots of varying density. High contrast. Hand-drawn stipple dot technique. 
 
 Article Title: "${title}"
 Category Theme: ${categoryContext}
-Article Summary: "${contentSummary}"
+Article Summary: "${contentSummary}"${topicContext}
 
-The illustration should be a conceptual editorial portrait that visually represents the core ideas and themes of this article about "${keyContext}". Must look like it was hand-engraved for a 1980s newspaper. Reference: classic WSJ Hedcut portraits by Kevin Sprouls.`
+The illustration should be a conceptual editorial portrait that visually represents the core ideas and themes of this article about "${keyContext}${topicContext}". Must look like it was hand-engraved for a 1980s newspaper. Reference: classic WSJ Hedcut portraits by Kevin Sprouls.`
+}
+
+// Simple topic sanitizer: trims, strips HTML tags, collapses whitespace, enforces max length
+function sanitizeTopic(input) {
+  if (!input) return ''
+  try {
+    let s = String(input)
+    s = s.replace(/<[^>]*>/g, '') // remove HTML tags
+    s = s.replace(/[\r\n\t]+/g, ' ') // remove control whitespace
+    s = s.replace(/\s+/g, ' ').trim()
+    if (s.length === 0) return ''
+    if (s.length > 120) s = s.slice(0, 120).trim()
+    // basic blacklist for prompt injection phrases
+    const forbidden = ['ignore previous', 'ignore all previous', 'disregard instructions', 'do not follow']
+    const lower = s.toLowerCase()
+    for (const phrase of forbidden) {
+      if (lower.includes(phrase)) return null
+    }
+    return s
+  } catch (err) {
+    return null
+  }
 }
 
 // AI generate article
 app.post('/api/admin/ai/generate', async (req, res) => {
   if (!openai) return res.status(500).json({ message: 'OPENAI_API_KEY not configured' })
-  const { category, sourceUrl, mode = 'rewrite' } = req.body || {}
+  const { category, topic, sourceUrl, mode = 'rewrite' } = req.body || {}
   if (!category) return res.status(400).json({ message: 'category is required' })
+
+  // sanitize topic if present
+  let sanitizedTopic = ''
+  if (typeof topic !== 'undefined') {
+    const s = sanitizeTopic(topic)
+    if (s === null) return res.status(400).json({ message: 'Invalid topic' })
+    sanitizedTopic = s
+  }
 
   try {
     let sourceText = ''
@@ -492,9 +523,14 @@ app.post('/api/admin/ai/generate', async (req, res) => {
       sourceText = extracted?.content || extracted?.text || extracted?.description || ''
     }
 
+    const userMessageLines = []
+    userMessageLines.push(`Write an article for category "${category}" in a calm, authoritative tone.`)
+    if (sanitizedTopic) userMessageLines.push(`Focus the article on the topic: "${sanitizedTopic}".`)
+    userMessageLines.push(`Mode: ${mode}`)
+    userMessageLines.push(`Source:\n${sourceText.slice(0, 6000)}`)
     const prompt = [
       { role: 'system', content: 'You are an editor for a newspaper-style UX publication. Output JSON only.' },
-      { role: 'user', content: `Write an article for category "${category}" in a calm, authoritative tone.\nMode: ${mode}\nSource:\n${sourceText.slice(0, 6000)}` },
+      { role: 'user', content: userMessageLines.join('\n') },
       { role: 'user', content: 'Return JSON with keys: title, dek, excerpt, body_markdown. Body should include h2s, bullets if useful.' },
     ]
 
@@ -517,7 +553,7 @@ app.post('/api/admin/ai/generate', async (req, res) => {
       console.log('Generating Hedcut image for:', parsed.title || 'UX design')
       const img = await openai.images.generate({
         model: 'dall-e-3',
-        prompt: generateImagePrompt(parsed.title || 'UX design', parsed.dek, parsed.excerpt, parsed.body_markdown, category),
+        prompt: generateImagePrompt(parsed.title || 'UX design', parsed.dek, parsed.excerpt, parsed.body_markdown, category, sanitizedTopic),
         size: '1024x1024',
         quality: 'hd',
         style: 'natural',
