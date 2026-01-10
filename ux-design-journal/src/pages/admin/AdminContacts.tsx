@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { adminDeleteContact, adminListContacts, adminUpdateContact } from '../../api/admin'
 import type { Contact } from '../../types'
 import { useAuth } from '../../auth/AuthContext'
@@ -15,7 +15,7 @@ export function AdminContacts() {
   const [updating, setUpdating] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
 
-  const loadContacts = async (pageNum: number, search: string, status: string) => {
+  const loadContacts = useCallback(async (pageNum: number, search: string, status: string) => {
     if (!token) return
     setLoading(true)
     try {
@@ -35,11 +35,11 @@ export function AdminContacts() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     loadContacts(1, '', '')
-  }, [token])
+  }, [loadContacts])
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
