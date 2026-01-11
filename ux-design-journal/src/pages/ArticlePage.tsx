@@ -95,7 +95,7 @@ export function ArticlePage() {
     const readMoreAd = pickOne(inlineAds.filter((ad) => ad.size === '728x250' || ad.placement === 'article-readmore'))
     return readMoreAd || {
       id: 'article-readmore-placeholder',
-      type: 'IMAGE_LINK',
+      type: 'IMAGE_LINK' as const,
       imageUrl: 'https://placehold.co/728x250?text=Ad+728x250',
       href: '#',
       label: 'Advertisement',
@@ -106,7 +106,7 @@ export function ArticlePage() {
   const sidebarSlot: AdSlot = useMemo(() => {
     return pickOne(data?.ads?.sidebar) || {
       id: 'article-sidebar-placeholder',
-      type: 'IMAGE_LINK',
+      type: 'IMAGE_LINK' as const,
       imageUrl: 'https://placehold.co/300x600?text=Ad+300x600',
       href: '#',
       label: 'Advertisement',

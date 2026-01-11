@@ -27,7 +27,7 @@ export function HomePage() {
 
   const latestAdSlot = useMemo(() => pickOne(data?.ads?.sidebar) || {
     id: 'home-latest-placeholder',
-    type: 'IMAGE_LINK',
+    type: 'IMAGE_LINK' as const,
     imageUrl: 'https://placehold.co/300x600?text=Ad+300x600',
     href: '#',
     label: 'Advertisement',
@@ -36,7 +36,7 @@ export function HomePage() {
 
   const leadAdSlot = useMemo(() => pickOne(data?.ads?.inline) || {
     id: 'home-lead-placeholder',
-    type: 'IMAGE_LINK',
+    type: 'IMAGE_LINK' as const,
     imageUrl: 'https://placehold.co/728x250?text=Ad+728x250',
     href: '#',
     label: 'Advertisement',
