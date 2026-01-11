@@ -897,6 +897,9 @@ footer{
   margin: 18px 0;
 }
 .ad-slot.sidebar{
+  margin-bottom: 20px;
+}
+.ad-slot.sidebar.sticky{
   position:sticky;
   top:90px;
 }

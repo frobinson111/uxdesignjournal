@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { fetchHomepage } from '../api/public'
 import type { HomepagePayload } from '../types'
 import { ArticleList } from '../components/ArticleList'
@@ -23,6 +23,26 @@ export function HomePage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const pickOne = <T,>(arr: T[] = []) => (arr.length ? arr[Math.floor(Math.random() * arr.length)] : undefined)
+
+  const latestAdSlot = useMemo(() => pickOne(data?.ads?.sidebar) || {
+    id: 'home-latest-placeholder',
+    type: 'IMAGE_LINK',
+    imageUrl: 'https://placehold.co/300x600?text=Ad+300x600',
+    href: '#',
+    label: 'Advertisement',
+    alt: '300x600 ad',
+  }, [data?.ads?.sidebar])
+
+  const leadAdSlot = useMemo(() => pickOne(data?.ads?.inline) || {
+    id: 'home-lead-placeholder',
+    type: 'IMAGE_LINK',
+    imageUrl: 'https://placehold.co/728x250?text=Ad+728x250',
+    href: '#',
+    label: 'Advertisement',
+    alt: '728x250 ad',
+  }, [data?.ads?.inline])
+
   if (loading) {
     return <div className="wrap section">Loading homepage…</div>
   }
@@ -32,26 +52,6 @@ export function HomePage() {
   }
 
   if (!data) return null
-
-  const pickOne = <T,>(arr: T[] = []) => (arr.length ? arr[Math.floor(Math.random() * arr.length)] : undefined)
-
-  const latestAdSlot = pickOne(data.ads?.sidebar) || {
-    id: 'home-latest-placeholder',
-    type: 'IMAGE_LINK',
-    imageUrl: 'https://via.placeholder.com/300x600?text=Ad+300x600',
-    href: '#',
-    label: 'Advertisement',
-    alt: '300x600 ad',
-  }
-
-  const leadAdSlot = pickOne(data.ads?.inline) || {
-    id: 'home-lead-placeholder',
-    type: 'IMAGE_LINK',
-    imageUrl: 'https://via.placeholder.com/728x250?text=Ad+728x250',
-    href: '#',
-    label: 'Advertisement',
-    alt: '728x250 ad',
-  }
 
   return (
     <div className="wrap section">

@@ -186,7 +186,11 @@ export function AdminAds() {
             <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
               <label style={{ flex: 1, minWidth: 240 }}>
                 Image URL
-                <input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} />
+                <input 
+                  placeholder="https://... or 300x600?text=Ad (will be auto-prefixed)"
+                  value={form.imageUrl} 
+                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} 
+                />
               </label>
               <label style={{ flex: 1, minWidth: 240 }}>
                 Link (href)

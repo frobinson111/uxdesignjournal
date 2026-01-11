@@ -683,29 +683,34 @@ app.get('/api/public/categories', (_req, res) => {
 })
 
 app.get('/api/public/homepage', async (_req, res) => {
-  const adPlacements = await getAdsByPlacement(['homepage-latest', 'homepage-lead'])
-  const pickPlacement = (key) => pickRandom(adPlacements[key] || []).map(mapAd)
+  try {
+    const adPlacements = await getAdsByPlacement(['homepage-latest', 'homepage-lead'])
+    const pickPlacement = (key) => pickRandom(adPlacements[key] || []).map(mapAd)
 
-  const latest = await Article.find({ status: 'published' }).sort({ createdAt: -1 }).limit(6).lean()
-  const lead = latest[0] ? mapArticle(latest[0]) : null
-  const daily = latest.slice(0, 4).map(mapArticle)
-  const featured = await Article.find({ featured: true, status: 'published' })
-    .sort({ featureOrder: 1, createdAt: -1 })
-    .limit(6)
-    .lean()
-  const tiles = await Article.find({ status: 'published' }).sort({ createdAt: -1 }).limit(4).lean()
-  res.json({
-    categories,
-    latest: latest.map(mapArticle),
-    lead,
-    daily,
-    featured: featured.map(mapArticle),
-    tiles: tiles.map(mapArticle),
-    ads: {
-      sidebar: pickPlacement('homepage-latest'),
-      inline: pickPlacement('homepage-lead'),
-    },
-  })
+    const latest = await Article.find({ status: 'published' }).sort({ createdAt: -1 }).limit(6).lean()
+    const lead = latest[0] ? mapArticle(latest[0]) : null
+    const daily = latest.slice(0, 4).map(mapArticle)
+    const featured = await Article.find({ featured: true, status: 'published' })
+      .sort({ featureOrder: 1, createdAt: -1 })
+      .limit(6)
+      .lean()
+    const tiles = await Article.find({ status: 'published' }).sort({ createdAt: -1 }).limit(4).lean()
+    res.json({
+      categories,
+      latest: latest.map(mapArticle),
+      lead,
+      daily,
+      featured: featured.map(mapArticle),
+      tiles: tiles.map(mapArticle),
+      ads: {
+        sidebar: pickPlacement('homepage-latest'),
+        inline: pickPlacement('homepage-lead'),
+      },
+    })
+  } catch (err) {
+    console.error('Homepage error:', err)
+    res.status(500).json({ message: err.message || 'Server error' })
+  }
 })
 
 app.get('/api/public/category/:slug', async (req, res) => {
@@ -1016,17 +1021,24 @@ const safeImageUrl = (doc) => {
   return url
 }
 const mapArticle = (a) => ({ ...a, imageUrl: safeImageUrl(a) })
-const mapAd = (ad) => ({
-  id: ad._id?.toString() || ad.id,
-  placement: ad.placement,
-  size: ad.size,
-  type: ad.type,
-  imageUrl: ad.imageUrl,
-  href: ad.href,
-  alt: ad.alt,
-  html: ad.html,
-  label: ad.label,
-})
+const mapAd = (ad) => {
+  let imageUrl = ad.imageUrl || ''
+  // Fix incomplete placeholder URLs
+  if (imageUrl && !imageUrl.startsWith('http')) {
+    imageUrl = `https://placehold.co/${imageUrl}`
+  }
+  return {
+    id: ad._id?.toString() || ad.id,
+    placement: ad.placement,
+    size: ad.size,
+    type: ad.type,
+    imageUrl,
+    href: ad.href,
+    alt: ad.alt,
+    html: ad.html,
+    label: ad.label,
+  }
+}
 
 const sanitizeAdPayload = (body = {}) => {
   const base = {

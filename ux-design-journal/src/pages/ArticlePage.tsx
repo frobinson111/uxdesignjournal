@@ -88,30 +88,35 @@ export function ArticlePage() {
     })
   }, [data])
 
+  const pickOne = <T,>(arr: T[] = []) => (arr.length ? arr[Math.floor(Math.random() * arr.length)] : undefined)
+
+  const readMoreSlot: AdSlot = useMemo(() => {
+    const inlineAds = data?.ads?.inline || []
+    const readMoreAd = pickOne(inlineAds.filter((ad) => ad.size === '728x250' || ad.placement === 'article-readmore'))
+    return readMoreAd || {
+      id: 'article-readmore-placeholder',
+      type: 'IMAGE_LINK',
+      imageUrl: 'https://placehold.co/728x250?text=Ad+728x250',
+      href: '#',
+      label: 'Advertisement',
+      alt: '728x250 ad',
+    }
+  }, [data?.ads?.inline])
+
+  const sidebarSlot: AdSlot = useMemo(() => {
+    return pickOne(data?.ads?.sidebar) || {
+      id: 'article-sidebar-placeholder',
+      type: 'IMAGE_LINK',
+      imageUrl: 'https://placehold.co/300x600?text=Ad+300x600',
+      href: '#',
+      label: 'Advertisement',
+      alt: '300x600 ad',
+    }
+  }, [data?.ads?.sidebar])
+
   if (loading) return <div className="wrap section">Loading…</div>
   if (error) return <div className="wrap section error">{error}</div>
   if (!data) return null
-
-  const pickOne = <T,>(arr: T[] = []) => (arr.length ? arr[Math.floor(Math.random() * arr.length)] : undefined)
-  const inlineAds = data.ads?.inline || []
-  const readMoreAd = pickOne(inlineAds.filter((ad) => ad.size === '728x250' || ad.placement === 'article-readmore'))
-  const readMoreSlot: AdSlot = readMoreAd || {
-    id: 'article-readmore-placeholder',
-    type: 'IMAGE_LINK',
-    imageUrl: 'https://via.placeholder.com/728x250?text=Ad+728x250',
-    href: '#',
-    label: 'Advertisement',
-    alt: '728x250 ad',
-  }
-
-  const sidebarSlots: AdSlot[] = (data.ads?.sidebar?.length ? data.ads.sidebar : [{
-    id: 'article-sidebar-placeholder',
-    type: 'IMAGE_LINK',
-    imageUrl: 'https://via.placeholder.com/300x600?text=Ad+300x600',
-    href: '#',
-    label: 'Advertisement',
-    alt: '300x600 ad',
-  }])
 
   const latestForAside = latestPosts.filter((p) => p.slug !== data.slug).slice(0, 6)
 
@@ -219,7 +224,7 @@ export function ArticlePage() {
 
         <section className="aside-box" aria-label="Advertisement">
           <h3 className="aside-title">Ad</h3>
-          {sidebarSlots.map((slot) => <AdSlotRenderer key={slot.id || slot.imageUrl} slot={slot} placement="sidebar" size="300x600" />)}
+          <AdSlotRenderer slot={sidebarSlot} placement="sidebar" size="300x600" isSticky />
         </section>
       </aside>
     </div>
