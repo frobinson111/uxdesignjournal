@@ -11,7 +11,8 @@ export function AdminLayout() {
     { to: '/admin/ai', label: 'Generate with AI' },
     { to: '/admin/ads', label: 'Ads' },
     { to: '/admin/contacts', label: 'Contacts' },
-    { to: '/admin/users', label: 'Users' },
+    { to: '/admin/subscribers', label: 'Subscribers' },
+    { to: '/admin/admin-users', label: 'Admin Users' },
   ]
 
   const isLinkActive = (linkPath: string): boolean => {

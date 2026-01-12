@@ -264,9 +264,85 @@ app.post('/api/admin/login', async (req, res) => {
   const { email, password } = req.body || {}
   const user = await User.findOne({ email })
   if (!user) return res.status(401).json({ message: 'Invalid credentials' })
+  // Check if user is active
+  if (user.status !== 'active') return res.status(401).json({ message: 'Account is inactive' })
   const ok = await bcrypt.compare(password || '', user.passwordHash || '')
   if (!ok) return res.status(401).json({ message: 'Invalid credentials' })
   return res.json({ token: 'dev-token', user: { email: user.email } })
+})
+
+// Admin Users CRUD
+app.get('/api/admin/users', async (req, res) => {
+  const users = await User.find({}).sort({ createdAt: -1 }).lean()
+  res.json({
+    users: users.map((u) => ({
+      id: u._id.toString(),
+      email: u.email,
+      role: u.role,
+      status: u.status,
+      createdAt: u.createdAt,
+    })),
+  })
+})
+
+app.post('/api/admin/users', async (req, res) => {
+  const { email, password } = req.body || {}
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required' })
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ message: 'Password must be at least 8 characters' })
+  }
+  const existing = await User.findOne({ email })
+  if (existing) {
+    return res.status(400).json({ message: 'User with this email already exists' })
+  }
+  const passwordHash = await bcrypt.hash(password, 10)
+  const user = await User.create({ email, passwordHash, role: 'admin', status: 'active' })
+  res.json({
+    id: user._id.toString(),
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    createdAt: user.createdAt,
+  })
+})
+
+app.patch('/api/admin/users/:id/status', async (req, res) => {
+  const { status } = req.body || {}
+  if (!['active', 'inactive'].includes(status)) {
+    return res.status(400).json({ message: 'Invalid status' })
+  }
+  // Prevent deactivating the last active admin
+  if (status === 'inactive') {
+    const activeCount = await User.countDocuments({ status: 'active', role: 'admin' })
+    if (activeCount <= 1) {
+      return res.status(400).json({ message: 'Cannot deactivate the last active admin' })
+    }
+  }
+  const user = await User.findByIdAndUpdate(req.params.id, { status }, { new: true })
+  if (!user) return res.status(404).json({ message: 'User not found' })
+  res.json({
+    id: user._id.toString(),
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    createdAt: user.createdAt,
+  })
+})
+
+app.delete('/api/admin/users/:id', async (req, res) => {
+  // Prevent deleting the last active admin
+  const user = await User.findById(req.params.id)
+  if (!user) return res.status(404).json({ message: 'User not found' })
+  if (user.status === 'active') {
+    const activeCount = await User.countDocuments({ status: 'active', role: 'admin' })
+    if (activeCount <= 1) {
+      return res.status(400).json({ message: 'Cannot delete the last active admin' })
+    }
+  }
+  await User.findByIdAndDelete(req.params.id)
+  res.json({ ok: true })
 })
 
 // Admin list articles

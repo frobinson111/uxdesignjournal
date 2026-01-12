@@ -3,7 +3,7 @@ import { adminListSubscribers, adminDeleteSubscriber, adminBulkDeleteSubscribers
 import type { Subscriber } from '../../types'
 import { useAuth } from '../../auth/AuthContext'
 
-export function AdminUsers() {
+export function AdminSubscribers() {
   const { token } = useAuth()
   const [subscribers, setSubscribers] = useState<Subscriber[]>([])
   const [loading, setLoading] = useState(true)

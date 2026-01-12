@@ -22,7 +22,8 @@ import { AdminAIGenerate } from './pages/admin/AdminAIGenerate'
 import { AdminAds } from './pages/admin/AdminAds'
 import { AdminContacts } from './pages/admin/AdminContacts'
 import { AdminDashboard } from './pages/admin/AdminDashboard'
-import { AdminUsers } from './pages/admin/AdminUsers'
+import { AdminSubscribers } from './pages/admin/AdminSubscribers'
+import { AdminAdminUsers } from './pages/admin/AdminAdminUsers'
 
 function App() {
   const { categories } = useCategories()
@@ -51,7 +52,8 @@ function App() {
               <Route path="ai" element={<AdminAIGenerate />} />
               <Route path="ads" element={<AdminAds />} />
               <Route path="contacts" element={<AdminContacts />} />
-              <Route path="users" element={<AdminUsers />} />
+              <Route path="subscribers" element={<AdminSubscribers />} />
+              <Route path="admin-users" element={<AdminAdminUsers />} />
             </Route>
           </Route>
         </Routes>

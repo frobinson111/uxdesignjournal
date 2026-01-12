@@ -181,3 +181,41 @@ export async function adminDeleteContact(token: string, id: string) {
     headers: { Authorization: `Bearer ${token}` },
   })
 }
+
+// Admin Users Management
+export interface AdminUser {
+  id: string
+  email: string
+  role: string
+  status: string
+  createdAt: string
+}
+
+export async function adminListUsers(token: string) {
+  return request<{ users: AdminUser[] }>('/api/admin/users', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function adminCreateUser(token: string, email: string, password: string) {
+  return request<AdminUser>('/api/admin/users', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ email, password }),
+  })
+}
+
+export async function adminUpdateUserStatus(token: string, id: string, status: 'active' | 'inactive') {
+  return request<AdminUser>(`/api/admin/users/${id}/status`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ status }),
+  })
+}
+
+export async function adminDeleteUser(token: string, id: string) {
+  return request<{ ok: boolean }>(`/api/admin/users/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
