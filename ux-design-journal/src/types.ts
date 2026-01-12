@@ -101,6 +101,7 @@ export interface AdminArticleListItem {
 export interface AdminArticlesResponse {
   items: AdminArticleListItem[]
   page: number
+  total: number
   totalPages: number
 }
 

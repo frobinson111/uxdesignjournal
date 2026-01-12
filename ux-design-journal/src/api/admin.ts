@@ -21,10 +21,13 @@ export async function adminGetMe(token: string) {
   })
 }
 
-export async function adminListArticles(token: string, params: { page?: number; q?: string } = {}) {
+export async function adminListArticles(token: string, params: { page?: number; q?: string; status?: string; category?: string; limit?: number } = {}) {
   const search = new URLSearchParams()
   if (params.page) search.set('page', String(params.page))
   if (params.q) search.set('q', params.q)
+  if (params.status) search.set('status', params.status)
+  if (params.category) search.set('category', params.category)
+  if (params.limit) search.set('limit', String(params.limit))
   const qs = search.toString()
   const path = `/api/admin/articles${qs ? `?${qs}` : ''}`
   return request<AdminArticlesResponse>(path, { headers: { Authorization: `Bearer ${token}` } })

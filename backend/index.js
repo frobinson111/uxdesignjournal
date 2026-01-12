@@ -272,10 +272,16 @@ app.post('/api/admin/login', async (req, res) => {
 // Admin list articles
 app.get('/api/admin/articles', async (req, res) => {
   const page = Number(req.query.page) || 1
-  const limit = 10
-  const q = (req.query.q || '').toString().trim().toLowerCase()
+  const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100)
+  const q = (req.query.q || '').toString().trim()
+  const status = (req.query.status || '').toString().trim()
+  const category = (req.query.category || '').toString().trim()
+  
   const filter = {}
   if (q) filter.title = { $regex: q, $options: 'i' }
+  if (status && ['draft', 'scheduled', 'published'].includes(status)) filter.status = status
+  if (category) filter.category = category
+  
   const total = await Article.countDocuments(filter)
   const items = await Article.find(filter)
     .sort({ createdAt: -1 })
@@ -295,6 +301,7 @@ app.get('/api/admin/articles', async (req, res) => {
       imageUrl: safeImageUrl(a),
     })),
     page,
+    total,
     totalPages: Math.max(1, Math.ceil(total / limit)),
   })
 })
