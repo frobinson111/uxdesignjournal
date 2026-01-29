@@ -1,0 +1,20 @@
+[
+  {
+    "_id": "695d38e763ddd89a505147e2",
+    "email": "admin@example.com",
+    "createdAt": "2026-01-06T16:31:34.944Z",
+    "passwordHash": "$2b$10$LA1Az.5HNrxUJA.SN/nTMuKfmNe8n9LIBw5z.nIM/m/EqLIY402S2",
+    "role": "admin",
+    "status": "active"
+  },
+  {
+    "_id": "6964eff6396fdc68066c379d",
+    "email": "paulmainor@gmail.com",
+    "passwordHash": "$2b$10$Id66EckEUOysiGfdI80Wr.B2KiSzL5PwiLjxZjhxdQpsNeAwDLgHe",
+    "role": "admin",
+    "status": "active",
+    "createdAt": "2026-01-12T12:58:30.500Z",
+    "updatedAt": "2026-01-12T12:58:30.500Z",
+    "__v": 0
+  }
+]

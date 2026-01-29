@@ -569,7 +569,29 @@ footer{
   font-family:var(--sans);
   font-size:12px;
   color:var(--muted);
-  text-align:center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.social-icons{
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.social-icons a{
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease;
+}
+
+.social-icons a:hover{
+  opacity: 0.6;
 }
 
 /* Article + category layouts */

@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-01-29T08:25:30.545Z",
+  "mongoUri": "mongodb+srv://***:***@cluster3.ia8o2eg.mongodb.net/uxdj",
+  "collections": {
+    "users": {
+      "documents": 2,
+      "sizeBytes": 574,
+      "sizeKB": "0.56",
+      "filename": "users.json"
+    },
+    "articles": {
+      "documents": 16,
+      "sizeBytes": 52016,
+      "sizeKB": "50.80",
+      "filename": "articles.json"
+    },
+    "ads": {
+      "documents": 8,
+      "sizeBytes": 3739,
+      "sizeKB": "3.65",
+      "filename": "ads.json"
+    },
+    "subscribers": {
+      "documents": 0,
+      "sizeBytes": 2,
+      "sizeKB": "0.00",
+      "filename": "subscribers.json"
+    },
+    "contacts": {
+      "documents": 0,
+      "sizeBytes": 2,
+      "sizeKB": "0.00",
+      "filename": "contacts.json"
+    }
+  },
+  "totalDocuments": 26,
+  "totalSizeBytes": 56333
+}
