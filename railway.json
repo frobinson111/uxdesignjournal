@@ -5,7 +5,7 @@
     "nixpacksConfigPath": "backend/nixpacks.toml"
   },
   "deploy": {
-    "startCommand": "cd backend && node index.js",
+    "startCommand": "node index.js",
     "restartPolicyType": "ON_FAILURE"
   }
 }
