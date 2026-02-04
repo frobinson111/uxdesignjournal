@@ -19,6 +19,8 @@
 //
 // Backend v3.0.0 - Supabase Migration - Ads management, article delete
 import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import express from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser'
@@ -30,7 +32,10 @@ import OpenAI from 'openai'
 import { extract } from '@extractus/article-extractor'
 import { v2 as cloudinary } from 'cloudinary'
 
-dotenv.config()
+// Load backend/.env even if started from repo root
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+dotenv.config({ path: path.resolve(__dirname, '.env') })
 
 const PORT = process.env.PORT || 4000
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com'
@@ -236,7 +241,7 @@ const seedArticles = async () => {
     },
     {
       slug: 'ai-didnt-change-ux',
-      title: 'AI Didn't Change UX. Compliance Did.',
+      title: "AI Didn't Change UX. Compliance Did.",
       excerpt: 'The quiet shift reshaping authority inside design teams.',
       category: 'signals',
       date: now.toISOString().split('T')[0],
@@ -244,7 +249,7 @@ const seedArticles = async () => {
     },
     {
       slug: 'good-design-misalignment',
-      title: 'Good Design Doesn't Survive Bad Alignment',
+      title: "Good Design Doesn't Survive Bad Alignment",
       excerpt: 'Talent cannot outwork misalignment. Stop trying.',
       category: 'practice',
       date: now.toISOString().split('T')[0],
