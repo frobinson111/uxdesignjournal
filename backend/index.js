@@ -73,11 +73,12 @@ const envAllowedOrigins = (process.env.ALLOWED_ORIGINS || '')
 
 const allowedOrigins = [...baseAllowedOrigins, ...envAllowedOrigins]
 
-const isAllowedOrigin = (_origin) => true // Temporarily allow all origins while debugging CORS
 app.use(cors({
   origin: (origin, callback) => {
-    // Reflect request origin (needed for credentials + wildcard)
-    callback(null, origin || true)
+    // Allow requests with no origin (server-to-server, curl, mobile apps)
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) return callback(null, origin)
+    callback(new Error('Not allowed by CORS'))
   },
   credentials: true,
 }))

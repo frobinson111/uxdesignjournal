@@ -1,16 +1,15 @@
 #!/bin/bash
 
-# Kill any existing processes on ports 3000 and 3001
+# Kill any existing processes on ports 4000 and 3001
 echo "Cleaning up existing processes..."
-lsof -ti:3000 | xargs kill -9 2>/dev/null
+lsof -ti:4000 | xargs kill -9 2>/dev/null
 lsof -ti:3001 | xargs kill -9 2>/dev/null
-lsof -ti:3002 | xargs kill -9 2>/dev/null
 sleep 2
 
-# Start backend
-echo "Starting backend on port 3000..."
+# Start backend (PORT=4000 matches backend/.env and frontend .env.local proxy)
+echo "Starting backend on port 4000..."
 cd "/Users/frankrobinson/Desktop/UX Design Journal/desktop app website files/backend"
-PORT=3000 node index.js &
+node index.js &
 BACKEND_PID=$!
 
 # Wait for backend to be ready
@@ -34,7 +33,7 @@ echo "Frontend started with PID $FRONTEND_PID"
 echo ""
 echo "======================================"
 echo "Both servers running!"
-echo "Backend:  http://localhost:3000"
+echo "Backend:  http://localhost:4000"
 echo "Frontend: http://localhost:3001"
 echo "======================================"
 echo ""
