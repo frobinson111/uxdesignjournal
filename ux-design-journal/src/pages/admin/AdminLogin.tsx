@@ -43,7 +43,7 @@ export function AdminLogin() {
           {error && <div className="form-note error">{error}</div>}
           <button type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
         </form>
-        <p className="muted admin-hint">Demo credentials via env: VITE_ADMIN_EMAIL / VITE_ADMIN_PASSWORD (default admin@example.com / admin123)</p>
+
       </div>
     </div>
   )
