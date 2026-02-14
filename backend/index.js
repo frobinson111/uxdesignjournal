@@ -239,6 +239,7 @@ const seedArticles = async () => {
       excerpt: 'After momentum fades and before legacy forms, most designers live here.',
       category: 'career',
       date: now.toISOString().split('T')[0],
+      author: 'UXDJ',
       body_markdown: 'Middle career realities.',
       status: 'published',
     },
@@ -248,6 +249,8 @@ const seedArticles = async () => {
       excerpt: 'The quiet shift reshaping authority inside design teams.',
       category: 'signals',
       date: now.toISOString().split('T')[0],
+      author: 'UXDJ',
+      body_markdown: 'The quiet shift reshaping authority inside design teams.',
       status: 'published',
     },
     {
@@ -256,15 +259,18 @@ const seedArticles = async () => {
       excerpt: 'Talent cannot outwork misalignment. Stop trying.',
       category: 'practice',
       date: now.toISOString().split('T')[0],
+      author: 'UXDJ',
+      body_markdown: 'Talent cannot outwork misalignment. Stop trying.',
       status: 'published',
     },
   ]
   
+  console.log(`Seeding ${samples.length} sample articles...`)
   const { error: insertError } = await supabase.from('articles').insert(samples)
   if (insertError) {
-    console.error('Error seeding articles:', insertError)
+    console.error('Error seeding articles:', JSON.stringify(insertError, null, 2))
   } else {
-    console.log('Seeded sample articles')
+    console.log('Seeded sample articles successfully')
   }
 }
 
