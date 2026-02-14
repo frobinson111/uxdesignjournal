@@ -1165,7 +1165,7 @@ app.delete('/api/admin/contacts/:id', async (req, res) => {
 // Fallback image helper
 const fallbackImage = (slug = 'placeholder') => `https://picsum.photos/seed/${encodeURIComponent(slug)}/1024/1024`
 const safeImageUrl = (doc) => {
-  const url = doc?.imageUrl || ''
+  const url = doc?.image_url || doc?.imageUrl || ''
   if (!url) return fallbackImage(doc?.slug || 'placeholder')
   
   // Block temporary OpenAI URLs (they expire)
