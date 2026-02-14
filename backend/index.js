@@ -654,28 +654,30 @@ app.post('/api/admin/uploads', upload.single('file'), (req, res) => {
 
 // Helper function to generate contextual image prompt based on article content
 function generateImagePrompt(title, dek, excerpt, bodyMarkdown, category, topic) {
-  // Build category-aware context
-  const categoryContext = {
-    'practice': 'UX design methodology, user research, and design best practices',
-    'design-reviews': 'design critique, UX analysis, and design thinking',
-    'career': 'professional development, design careers, and workplace insights',
-    'signals': 'industry trends, emerging patterns, and design signals',
-    'journal': 'personal design observations, reflections, and stories',
-  }[category] || 'UX design and user experience'
+  // Build category-aware visual subject suggestions
+  const categoryHints = {
+    'practice': 'tools, wireframes, sketches, sticky notes, prototypes, design artifacts, user flows',
+    'design-reviews': 'screens, interfaces, magnifying glass, design critique, comparison layouts',
+    'career': 'desk workspace, ladder, handshake, briefcase, growth chart, mentorship scene',
+    'signals': 'radar, compass, telescope, trend arrows, emerging technology, data patterns',
+    'journal': 'notebook, pen, coffee cup, window view, thoughtful workspace, open sketchbook',
+  }[category] || 'design tools, digital interfaces, creative workspace'
 
-  // Combine article metadata to provide content context
-  const contentSummary = `${dek || excerpt || ''}`.slice(0, 250)
-  const bodySnippet = bodyMarkdown ? bodyMarkdown.slice(0, 400) : ''
-  const keyContext = `${contentSummary} ${bodySnippet}`.trim()
-  const topicContext = topic ? ` Topic: ${topic}` : ''
+  // Extract the core subject from article content
+  const contentSummary = `${dek || excerpt || ''}`.slice(0, 300)
+  const bodySnippet = bodyMarkdown ? bodyMarkdown.slice(0, 500) : ''
+  const topicContext = topic ? `Topic focus: ${topic}. ` : ''
 
-  return `A black and white stipple engraving portrait in the exact style of Wall Street Journal Hedcut illustrations. The image must use only tiny black ink dots (stippling technique) and fine crosshatch lines on a pure white background to create the portrait. No solid black fills, no gradients, no shading, no gray tones - only individual black dots of varying density. High contrast. Hand-drawn stipple dot technique. 
+  // Use GPT-style structured prompt: subject first, style second
+  return `Editorial illustration for a UX design newspaper article.
 
-Article Title: "${title}"
-Category Theme: ${categoryContext}
-Article Summary: "${contentSummary}"${topicContext}
+SUBJECT (most important — the image must clearly relate to this):
+Article: "${title}"
+${topicContext}Summary: "${contentSummary}"
+The illustration must depict a specific scene, object, or visual metaphor that directly represents the article's subject matter. Consider objects like: ${categoryHints}. Do NOT default to a generic face or person — instead show the concepts, tools, environments, or metaphors central to the article's topic.
 
-The illustration should be a conceptual editorial portrait that visually represents the core ideas and themes of this article about "${keyContext}${topicContext}". Must look like it was hand-engraved for a 1980s newspaper. Reference: classic WSJ Hedcut portraits by Kevin Sprouls.`
+STYLE (Hedcut stipple engraving):
+Black and white only. Rendered entirely with tiny hand-drawn ink dots (stippling) and fine crosshatch lines on a pure white background — in the style of classic Wall Street Journal Hedcut illustrations by Kevin Sprouls. High contrast. No solid fills, no gradients, no gray tones — only varying dot density. Must look hand-engraved for a newspaper editorial page.`
 }
 
 // Simple topic sanitizer: trims, strips HTML tags, collapses whitespace, enforces max length
