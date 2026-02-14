@@ -95,6 +95,22 @@ app.get('/', (_req, res) => {
   res.status(200).json({ app: 'uxdesignjournal-backend', status: 'running' })
 })
 
+// Debug: check database state (temporary)
+app.get('/api/public/debug-db', async (_req, res) => {
+  try {
+    const { data: articles, error: artErr, count: artCount } = await supabase
+      .from('articles').select('slug, status, created_at', { count: 'exact' })
+    const { data: users, error: usrErr, count: usrCount } = await supabase
+      .from('users').select('email, role', { count: 'exact' })
+    res.json({
+      articles: { count: artCount, error: artErr, rows: articles },
+      users: { count: usrCount, error: usrErr, rows: users },
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // Version/health (useful for verifying production deploy is on latest backend)
 app.get('/api/public/version', (_req, res) => {
   res.json({
