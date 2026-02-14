@@ -497,8 +497,11 @@ app.get('/api/admin/ads', async (req, res) => {
   let query = supabase.from('ads').select('*')
   if (placement) query = query.eq('placement', placement)
   const { data: ads, error } = await query.order('placement').order('order').order('updated_at', { ascending: false })
-  if (error) return res.status(500).json({ message: error.message })
-  res.json(ads || [])
+  if (error) {
+    console.error('List ads error:', error)
+    return res.status(500).json({ message: error.message })
+  }
+  res.json((ads || []).map(mapAd))
 })
 
 app.post('/api/admin/ads', async (req, res) => {
@@ -517,9 +520,13 @@ app.post('/api/admin/ads', async (req, res) => {
       order: payload.order,
     }
     const { data: created, error } = await supabase.from('ads').insert(adData).select().single()
-    if (error) throw new Error(error.message)
-    res.json(created)
+    if (error) {
+      console.error('Create ad error:', error)
+      throw new Error(error.message)
+    }
+    res.json(mapAd(created))
   } catch (err) {
+    console.error('Ad create failed:', err.message)
     res.status(400).json({ message: err.message || 'Invalid payload' })
   }
 })
@@ -540,9 +547,14 @@ app.put('/api/admin/ads/:id', async (req, res) => {
       order: payload.order,
     }
     const { data: updated, error } = await supabase.from('ads').update(adData).eq('id', req.params.id).select().single()
-    if (error || !updated) return res.status(404).json({ message: 'Not found' })
-    res.json(updated)
+    if (error) {
+      console.error('Update ad error:', error)
+      return res.status(500).json({ message: error.message || 'Update failed' })
+    }
+    if (!updated) return res.status(404).json({ message: 'Not found' })
+    res.json(mapAd(updated))
   } catch (err) {
+    console.error('Ad update failed:', err.message)
     res.status(400).json({ message: err.message || 'Invalid payload' })
   }
 })
@@ -1197,7 +1209,7 @@ const mapArticle = (a) => ({
   sourceUrl: a.source_url || '',
 })
 const mapAd = (ad) => {
-  let imageUrl = ad.imageUrl || ''
+  let imageUrl = ad.image_url || ad.imageUrl || ''
   // Fix incomplete placeholder URLs
   if (imageUrl && !imageUrl.startsWith('http')) {
     imageUrl = `https://placehold.co/${imageUrl}`
@@ -1212,6 +1224,8 @@ const mapAd = (ad) => {
     alt: ad.alt,
     html: ad.html,
     label: ad.label,
+    active: ad.active !== false,
+    order: ad.order || 0,
   }
 }
 
