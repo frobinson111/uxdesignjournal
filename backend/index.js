@@ -462,22 +462,26 @@ app.put('/api/admin/articles/:slug', async (req, res) => {
     title: body.title,
     excerpt: body.excerpt,
     dek: body.dek,
-    category: body.category,
-    date: body.date,
+    category: typeof body.category === 'object' ? body.category?.slug : body.category,
+    date: body.date || null,
     author: body.author,
     image_url: body.imageUrl,
     body_html: body.bodyHtml,
     body_markdown: body.bodyMarkdown,
     tags: body.tags,
     status: body.status,
-    publish_at: body.publishAt,
+    publish_at: body.publishAt || null,
     featured: body.featured,
     feature_order: body.featureOrder,
   }
   // Remove undefined values
   Object.keys(updateData).forEach(k => updateData[k] === undefined && delete updateData[k])
   const { data: updated, error } = await supabase.from('articles').update(updateData).eq('slug', req.params.slug).select().single()
-  if (error || !updated) return res.status(404).json({ message: 'Not found' })
+  if (error) {
+    console.error('Article update error:', error)
+    return res.status(500).json({ message: error.message || 'Update failed' })
+  }
+  if (!updated) return res.status(404).json({ message: 'Not found' })
   res.json(updated)
 })
 
@@ -1187,7 +1191,7 @@ const mapArticle = (a) => ({
   bodyMarkdown: a.body_markdown || '',
   bodyHtml: a.body_html || '',
   featureOrder: a.feature_order || 0,
-  publishAt: a.publish_at || '',
+  publishAt: a.publish_at || null,
   sourceUrl: a.source_url || '',
 })
 const mapAd = (ad) => {
