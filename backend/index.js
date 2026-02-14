@@ -732,7 +732,7 @@ app.post('/api/admin/ai/generate', async (req, res) => {
       model: 'gpt-4o-mini',
       messages: prompt,
       temperature: 0.7,
-      max_tokens: 900,
+      max_tokens: 4096,
       response_format: { type: 'json_object' },
     })
 
@@ -1181,7 +1181,15 @@ const safeImageUrl = (doc) => {
   
   return url
 }
-const mapArticle = (a) => ({ ...a, imageUrl: safeImageUrl(a) })
+const mapArticle = (a) => ({
+  ...a,
+  imageUrl: safeImageUrl(a),
+  bodyMarkdown: a.body_markdown || '',
+  bodyHtml: a.body_html || '',
+  featureOrder: a.feature_order || 0,
+  publishAt: a.publish_at || '',
+  sourceUrl: a.source_url || '',
+})
 const mapAd = (ad) => {
   let imageUrl = ad.imageUrl || ''
   // Fix incomplete placeholder URLs
