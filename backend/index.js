@@ -78,6 +78,8 @@ app.use(cors({
     // Allow requests with no origin (server-to-server, curl, mobile apps)
     if (!origin) return callback(null, true)
     if (allowedOrigins.includes(origin)) return callback(null, origin)
+    // Allow Vercel preview deployments (e.g. uxdesignjournal-abc123-user.vercel.app)
+    if (origin && origin.endsWith('.vercel.app')) return callback(null, origin)
     callback(new Error('Not allowed by CORS'))
   },
   credentials: true,
