@@ -219,3 +219,102 @@ export async function adminDeleteUser(token: string, id: string) {
     headers: { Authorization: `Bearer ${token}` },
   })
 }
+
+// Popup Lead Capture
+export interface PopupConfig {
+  id?: string
+  name: string
+  title: string
+  description: string
+  imageUrl: string
+  imageCaption: string
+  pdfUrl: string
+  pdfTitle: string
+  buttonText: string
+  delaySeconds: number
+  active: boolean
+  leadCount?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface PopupLead {
+  id: string
+  email: string
+  popupConfigId: string
+  popupName: string
+  popupTitle: string
+  status: string
+  ipAddress: string
+  userAgent: string
+  createdAt: string
+}
+
+export async function adminListPopups(token: string) {
+  return request<{ popups: PopupConfig[] }>('/api/admin/popups', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function adminGetPopup(token: string, id: string) {
+  return request<PopupConfig>(`/api/admin/popups/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function adminSavePopup(token: string, popup: PopupConfig) {
+  const isNew = !popup.id
+  const path = isNew ? '/api/admin/popups' : `/api/admin/popups/${popup.id}`
+  const method = isNew ? 'POST' : 'PUT'
+  return request<PopupConfig>(path, {
+    method,
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(popup),
+  })
+}
+
+export async function adminDeletePopup(token: string, id: string) {
+  return request<{ success: boolean; message: string }>(`/api/admin/popups/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function adminListPopupLeads(token: string, params: { page?: number; limit?: number; popupId?: string; search?: string } = {}) {
+  const search = new URLSearchParams()
+  if (params.page) search.set('page', String(params.page))
+  if (params.limit) search.set('limit', String(params.limit))
+  if (params.popupId) search.set('popupId', params.popupId)
+  if (params.search) search.set('search', params.search)
+  const qs = search.toString()
+  const path = `/api/admin/popup-leads${qs ? `?${qs}` : ''}`
+  return request<{ leads: PopupLead[]; page: number; limit: number; total: number; totalPages: number }>(path, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function adminExportPopupLeads(token: string, popupId?: string) {
+  const API_BASE = import.meta.env.VITE_API_BASE || ''
+  const qs = popupId ? `?popupId=${popupId}` : ''
+  const url = `${API_BASE}/api/admin/popup-leads/export${qs}`
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Export failed')
+  const blob = await res.blob()
+  const downloadUrl = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = downloadUrl
+  a.download = `popup-leads-${new Date().toISOString().split('T')[0]}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  window.URL.revokeObjectURL(downloadUrl)
+}
+
+export async function adminDeletePopupLead(token: string, id: string) {
+  return request<{ success: boolean; message: string }>(`/api/admin/popup-leads/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}

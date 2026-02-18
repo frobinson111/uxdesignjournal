@@ -10,6 +10,8 @@ export function AdminLayout() {
     { to: '/admin/articles/new', label: 'New Article' },
     { to: '/admin/ai', label: 'Generate with AI' },
     { to: '/admin/ads', label: 'Ads' },
+    { to: '/admin/popups', label: 'Lead Popups' },
+    { to: '/admin/popup-leads', label: 'Popup Leads' },
     { to: '/admin/contacts', label: 'Contacts' },
     { to: '/admin/subscribers', label: 'Subscribers' },
     { to: '/admin/admin-users', label: 'Admin Users' },

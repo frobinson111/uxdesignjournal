@@ -24,6 +24,8 @@ import { AdminContacts } from './pages/admin/AdminContacts'
 import { AdminDashboard } from './pages/admin/AdminDashboard'
 import { AdminSubscribers } from './pages/admin/AdminSubscribers'
 import { AdminAdminUsers } from './pages/admin/AdminAdminUsers'
+import { AdminPopups } from './pages/admin/AdminPopups'
+import { AdminPopupLeads } from './pages/admin/AdminPopupLeads'
 
 function App() {
   const { categories } = useCategories()
@@ -54,6 +56,8 @@ function App() {
               <Route path="contacts" element={<AdminContacts />} />
               <Route path="subscribers" element={<AdminSubscribers />} />
               <Route path="admin-users" element={<AdminAdminUsers />} />
+              <Route path="popups" element={<AdminPopups />} />
+              <Route path="popup-leads" element={<AdminPopupLeads />} />
             </Route>
           </Route>
         </Routes>

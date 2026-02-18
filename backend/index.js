@@ -63,6 +63,7 @@ const baseAllowedOrigins = [
   'https://uxdesignjournal.com',
   'https://www.uxdesignjournal.com',
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://localhost:5173',
 ]
 
@@ -1177,6 +1178,469 @@ app.delete('/api/admin/contacts/:id', async (req, res) => {
   } catch (err) {
     console.error('Delete contact error:', err)
     res.status(500).json({ error: 'Failed to delete contact.' })
+  }
+})
+
+// ============================================================================
+// POPUP LEAD CAPTURE SYSTEM
+// ============================================================================
+
+// Public: Get active popup config
+app.get('/api/public/popup/active', async (_req, res) => {
+  try {
+    const { data: popup, error } = await supabase
+      .from('popup_configs')
+      .select('*')
+      .eq('active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    
+    if (error) throw error
+    
+    if (!popup) {
+      return res.json({ popup: null })
+    }
+    
+    res.json({
+      popup: {
+        id: popup.id,
+        title: popup.title,
+        description: popup.description,
+        imageUrl: popup.image_url,
+        imageCaption: popup.image_caption,
+        pdfTitle: popup.pdf_title,
+        buttonText: popup.button_text,
+        delaySeconds: popup.delay_seconds,
+      }
+    })
+  } catch (err) {
+    console.error('Get active popup error:', err)
+    res.status(500).json({ error: 'Failed to fetch popup.' })
+  }
+})
+
+// Public: Submit popup lead and get download link
+app.post('/api/public/popup/submit', async (req, res) => {
+  const { email, popupId } = req.body || {}
+  const ipAddress = getClientIp(req)
+  const userAgent = req.headers['user-agent'] || ''
+  
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ success: false, message: 'Valid email required.' })
+  }
+  
+  if (!popupId) {
+    return res.status(400).json({ success: false, message: 'Popup ID required.' })
+  }
+  
+  try {
+    // Verify popup exists and is active
+    const { data: popup, error: popupError } = await supabase
+      .from('popup_configs')
+      .select('*')
+      .eq('id', popupId)
+      .eq('active', true)
+      .single()
+    
+    if (popupError || !popup) {
+      return res.status(404).json({ success: false, message: 'Popup not found or inactive.' })
+    }
+    
+    // Check if email already submitted for this popup (prevent duplicates in last 24 hours)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { data: existing } = await supabase
+      .from('popup_leads')
+      .select('id')
+      .eq('popup_config_id', popupId)
+      .eq('email', email.toLowerCase().trim())
+      .gte('created_at', oneDayAgo)
+      .maybeSingle()
+    
+    // Create lead record (even if duplicate - for analytics)
+    const { data: lead, error: leadError } = await supabase
+      .from('popup_leads')
+      .insert({
+        popup_config_id: popupId,
+        email: email.toLowerCase().trim(),
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        status: 'active'
+      })
+      .select()
+      .single()
+    
+    if (leadError) throw leadError
+    
+    // Also add to subscribers if not already there
+    const { data: subscriber } = await supabase
+      .from('subscribers')
+      .select('*')
+      .eq('email', email.toLowerCase().trim())
+      .maybeSingle()
+    
+    if (!subscriber) {
+      await supabase.from('subscribers').insert({
+        email: email.toLowerCase().trim(),
+        source: 'popup-lead-capture',
+        status: 'active'
+      })
+    } else if (subscriber.status === 'unsubscribed') {
+      await supabase
+        .from('subscribers')
+        .update({ status: 'active', source: 'popup-lead-capture' })
+        .eq('email', email.toLowerCase().trim())
+    }
+    
+    res.json({
+      success: true,
+      message: existing ? 'Download link sent again!' : 'Success! Check your email for the download link.',
+      downloadUrl: popup.pdf_url,
+      pdfTitle: popup.pdf_title,
+      leadId: lead.id
+    })
+  } catch (err) {
+    console.error('Popup lead submission error:', err)
+    res.status(500).json({ success: false, message: 'Failed to process request.' })
+  }
+})
+
+// Admin: List popup configs
+app.get('/api/admin/popups', async (req, res) => {
+  try {
+    const { data: popups, error } = await supabase
+      .from('popup_configs')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    
+    res.json({
+      popups: (popups || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        title: p.title,
+        description: p.description,
+        imageUrl: p.image_url,
+        imageCaption: p.image_caption,
+        pdfUrl: p.pdf_url,
+        pdfTitle: p.pdf_title,
+        buttonText: p.button_text,
+        delaySeconds: p.delay_seconds,
+        active: p.active,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at
+      }))
+    })
+  } catch (err) {
+    console.error('List popups error:', err)
+    res.status(500).json({ error: 'Failed to fetch popups.' })
+  }
+})
+
+// Admin: Get popup config
+app.get('/api/admin/popups/:id', async (req, res) => {
+  try {
+    const { data: popup, error } = await supabase
+      .from('popup_configs')
+      .select('*')
+      .eq('id', req.params.id)
+      .single()
+    
+    if (error || !popup) {
+      return res.status(404).json({ error: 'Popup not found.' })
+    }
+    
+    // Get lead count for this popup
+    const { count: leadCount } = await supabase
+      .from('popup_leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('popup_config_id', popup.id)
+    
+    res.json({
+      id: popup.id,
+      name: popup.name,
+      title: popup.title,
+      description: popup.description,
+      imageUrl: popup.image_url,
+      imageCaption: popup.image_caption,
+      pdfUrl: popup.pdf_url,
+      pdfTitle: popup.pdf_title,
+      buttonText: popup.button_text,
+      delaySeconds: popup.delay_seconds,
+      active: popup.active,
+      leadCount: leadCount || 0,
+      createdAt: popup.created_at,
+      updatedAt: popup.updated_at
+    })
+  } catch (err) {
+    console.error('Get popup error:', err)
+    res.status(500).json({ error: 'Failed to fetch popup.' })
+  }
+})
+
+// Admin: Create popup config
+app.post('/api/admin/popups', async (req, res) => {
+  try {
+    const {
+      name,
+      title,
+      description,
+      imageUrl,
+      imageCaption,
+      pdfUrl,
+      pdfTitle,
+      buttonText,
+      delaySeconds,
+      active
+    } = req.body || {}
+    
+    if (!name || !title || !pdfUrl || !pdfTitle) {
+      return res.status(400).json({ error: 'Name, title, pdfUrl, and pdfTitle are required.' })
+    }
+    
+    // If setting this as active, deactivate all others
+    if (active) {
+      await supabase.from('popup_configs').update({ active: false }).neq('id', '00000000-0000-0000-0000-000000000000')
+    }
+    
+    const { data: popup, error } = await supabase
+      .from('popup_configs')
+      .insert({
+        name,
+        title,
+        description: description || '',
+        image_url: imageUrl || '',
+        image_caption: imageCaption || '',
+        pdf_url: pdfUrl,
+        pdf_title: pdfTitle,
+        button_text: buttonText || 'Get Download Link',
+        delay_seconds: delaySeconds || 10,
+        active: active || false
+      })
+      .select()
+      .single()
+    
+    if (error) throw error
+    
+    res.json({
+      id: popup.id,
+      name: popup.name,
+      title: popup.title,
+      description: popup.description,
+      imageUrl: popup.image_url,
+      imageCaption: popup.image_caption,
+      pdfUrl: popup.pdf_url,
+      pdfTitle: popup.pdf_title,
+      buttonText: popup.button_text,
+      delaySeconds: popup.delay_seconds,
+      active: popup.active,
+      createdAt: popup.created_at
+    })
+  } catch (err) {
+    console.error('Create popup error:', err)
+    res.status(500).json({ error: 'Failed to create popup.' })
+  }
+})
+
+// Admin: Update popup config
+app.put('/api/admin/popups/:id', async (req, res) => {
+  try {
+    const {
+      name,
+      title,
+      description,
+      imageUrl,
+      imageCaption,
+      pdfUrl,
+      pdfTitle,
+      buttonText,
+      delaySeconds,
+      active
+    } = req.body || {}
+    
+    // If setting this as active, deactivate all others first
+    if (active) {
+      await supabase.from('popup_configs').update({ active: false }).neq('id', req.params.id)
+    }
+    
+    const updateData = {
+      name,
+      title,
+      description,
+      image_url: imageUrl,
+      image_caption: imageCaption,
+      pdf_url: pdfUrl,
+      pdf_title: pdfTitle,
+      button_text: buttonText,
+      delay_seconds: delaySeconds,
+      active
+    }
+    
+    // Remove undefined values
+    Object.keys(updateData).forEach(k => updateData[k] === undefined && delete updateData[k])
+    
+    const { data: popup, error } = await supabase
+      .from('popup_configs')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .select()
+      .single()
+    
+    if (error || !popup) {
+      return res.status(404).json({ error: 'Popup not found.' })
+    }
+    
+    res.json({
+      id: popup.id,
+      name: popup.name,
+      title: popup.title,
+      description: popup.description,
+      imageUrl: popup.image_url,
+      imageCaption: popup.image_caption,
+      pdfUrl: popup.pdf_url,
+      pdfTitle: popup.pdf_title,
+      buttonText: popup.button_text,
+      delaySeconds: popup.delay_seconds,
+      active: popup.active,
+      updatedAt: popup.updated_at
+    })
+  } catch (err) {
+    console.error('Update popup error:', err)
+    res.status(500).json({ error: 'Failed to update popup.' })
+  }
+})
+
+// Admin: Delete popup config
+app.delete('/api/admin/popups/:id', async (req, res) => {
+  try {
+    // First delete all associated leads
+    await supabase.from('popup_leads').delete().eq('popup_config_id', req.params.id)
+    
+    // Then delete the popup config
+    const { error } = await supabase.from('popup_configs').delete().eq('id', req.params.id)
+    
+    if (error) {
+      return res.status(404).json({ error: 'Popup not found.' })
+    }
+    
+    res.json({ success: true, message: 'Popup deleted.' })
+  } catch (err) {
+    console.error('Delete popup error:', err)
+    res.status(500).json({ error: 'Failed to delete popup.' })
+  }
+})
+
+// Admin: List popup leads
+app.get('/api/admin/popup-leads', async (req, res) => {
+  try {
+    const page = Number(req.query.page) || 1
+    const limit = Number(req.query.limit) || 20
+    const popupId = req.query.popupId
+    const search = (req.query.search || '').toLowerCase()
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+    
+    // Build query
+    let query = supabase
+      .from('popup_leads')
+      .select('*, popup_configs(name, title)', { count: 'exact' })
+    
+    if (popupId) {
+      query = query.eq('popup_config_id', popupId)
+    }
+    
+    if (search) {
+      query = query.ilike('email', `%${search}%`)
+    }
+    
+    const { data: leads, count: total, error } = await query
+      .order('created_at', { ascending: false })
+      .range(from, to)
+    
+    if (error) throw error
+    
+    res.json({
+      leads: (leads || []).map(l => ({
+        id: l.id,
+        email: l.email,
+        popupConfigId: l.popup_config_id,
+        popupName: l.popup_configs?.name || 'Unknown',
+        popupTitle: l.popup_configs?.title || 'Unknown',
+        status: l.status,
+        ipAddress: l.ip_address,
+        userAgent: l.user_agent,
+        createdAt: l.created_at
+      })),
+      page,
+      limit,
+      total: total || 0,
+      totalPages: Math.ceil((total || 0) / limit)
+    })
+  } catch (err) {
+    console.error('List popup leads error:', err)
+    res.status(500).json({ error: 'Failed to fetch leads.' })
+  }
+})
+
+// Admin: Export popup leads as CSV
+app.get('/api/admin/popup-leads/export', async (req, res) => {
+  try {
+    const popupId = req.query.popupId
+    
+    let query = supabase
+      .from('popup_leads')
+      .select('*, popup_configs(name, title)')
+    
+    if (popupId) {
+      query = query.eq('popup_config_id', popupId)
+    }
+    
+    const { data: leads, error } = await query.order('created_at', { ascending: false })
+    
+    if (error) throw error
+    
+    // Generate CSV
+    const csvRows = []
+    csvRows.push('Email,Popup Name,Popup Title,Status,IP Address,Submitted At')
+    
+    for (const lead of leads || []) {
+      const row = [
+        lead.email,
+        lead.popup_configs?.name || 'Unknown',
+        `"${(lead.popup_configs?.title || 'Unknown').replace(/"/g, '""')}"`,
+        lead.status,
+        lead.ip_address || 'N/A',
+        new Date(lead.created_at).toISOString()
+      ]
+      csvRows.push(row.join(','))
+    }
+    
+    const csv = csvRows.join('\n')
+    const filename = `popup-leads-${new Date().toISOString().split('T')[0]}.csv`
+    
+    res.setHeader('Content-Type', 'text/csv')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.send(csv)
+  } catch (err) {
+    console.error('Export popup leads error:', err)
+    res.status(500).json({ error: 'Failed to export leads.' })
+  }
+})
+
+// Admin: Delete popup lead
+app.delete('/api/admin/popup-leads/:id', async (req, res) => {
+  try {
+    const { error } = await supabase.from('popup_leads').delete().eq('id', req.params.id)
+    
+    if (error) {
+      return res.status(404).json({ error: 'Lead not found.' })
+    }
+    
+    res.json({ success: true, message: 'Lead deleted.' })
+  } catch (err) {
+    console.error('Delete popup lead error:', err)
+    res.status(500).json({ error: 'Failed to delete lead.' })
   }
 })
 
