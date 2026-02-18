@@ -1399,44 +1399,26 @@ app.post('/api/admin/popups', async (req, res) => {
       return res.status(400).json({ error: 'Name, title, pdfUrl, and pdfTitle are required.' })
     }
     
-    // If setting this as active, deactivate all others
-    if (active) {
-      await supabase.from('popup_configs').update({ active: false }).neq('id', '00000000-0000-0000-0000-000000000000')
+    // Use raw SQL to bypass PostgREST cache issues
+    const { data: popup, error } = await supabase.rpc('create_popup_config', {
+      p_name: name,
+      p_title: title,
+      p_description: description || '',
+      p_image_url: imageUrl || '',
+      p_image_caption: imageCaption || '',
+      p_pdf_url: pdfUrl,
+      p_pdf_title: pdfTitle,
+      p_button_text: buttonText || 'Get Download Link',
+      p_delay_seconds: delaySeconds || 10,
+      p_active: active || false
+    })
+    
+    if (error) {
+      console.error('Create popup RPC error:', error)
+      throw error
     }
     
-    const { data: popup, error } = await supabase
-      .from('popup_configs')
-      .insert({
-        name,
-        title,
-        description: description || '',
-        image_url: imageUrl || '',
-        image_caption: imageCaption || '',
-        pdf_url: pdfUrl,
-        pdf_title: pdfTitle,
-        button_text: buttonText || 'Get Download Link',
-        delay_seconds: delaySeconds || 10,
-        active: active || false
-      })
-      .select()
-      .single()
-    
-    if (error) throw error
-    
-    res.json({
-      id: popup.id,
-      name: popup.name,
-      title: popup.title,
-      description: popup.description,
-      imageUrl: popup.image_url,
-      imageCaption: popup.image_caption,
-      pdfUrl: popup.pdf_url,
-      pdfTitle: popup.pdf_title,
-      buttonText: popup.button_text,
-      delaySeconds: popup.delay_seconds,
-      active: popup.active,
-      createdAt: popup.created_at
-    })
+    res.json(popup)
   } catch (err) {
     console.error('Create popup error:', err)
     res.status(500).json({ error: 'Failed to create popup.' })
